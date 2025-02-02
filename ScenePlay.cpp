@@ -114,7 +114,7 @@ void ScenePlay::spawnPlayer()
 
 	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 2, m_player)));
 
-	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x, m_player->getComponent<CAnimation>().animation.getSize().y));
+	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x-10, m_player->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
 }
 
 Vec2 ScenePlay::gridtoMidPixel(float gridX, float gridY, std::shared_ptr<Entity> entity)
@@ -230,11 +230,6 @@ void ScenePlay::sAnimation()
 void ScenePlay::sDebug()
 {
 	m_game->m_window.setView(m_game->m_window.getDefaultView());
-	for (auto& entity : m_entities.getEntities("Control"))
-	{
-		entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-		m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-	}
 	m_playText.setString("SCORE: " + std::to_string(m_score));
 	m_playText.setCharacterSize(30);
 	m_playText.setPosition(1350.0f, 0.0f);
@@ -242,44 +237,31 @@ void ScenePlay::sDebug()
 
 	if (m_drawTextures)
 	{
-
-		// VIEW FOR THE LANDSCAPE......................................
-
-		setView(m_landScapeView, m_player->getComponent<CTransform>().velocity.x / 10);
-		for (auto& entity : m_entities.getEntities("Land"))
-		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-		}
-
-
-		// VIEW FOR THE PLAYER AND DECORATING ENTITIES
-
 		setView(m_playerView, m_player->getComponent<CTransform>().velocity.x);
-		for (auto& entity : m_entities.getEntities("Dec"))
+		std::string state = m_player->getComponent<CState>().state;
+		for (auto& entity : m_entities.getEntities("Sword"))
 		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+			if (state != "StandDown" && state != "RunDown")
+			{
+				entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
+				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+			}
 		}
-		for (auto& entity : m_entities.getEntities("Tile"))
+		for (auto& entity : m_entities.getEntities())
 		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-		}
-		for (auto& entity : m_entities.getEntities("Bullet"))
-		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-		}
-		for (auto& entity : m_entities.getEntities("Coin"))
-		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-		}
-		for (auto& entity : m_entities.getEntities("Player"))
-		{
-			entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-			m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+			if (entity->tag() != "Sword")
+			{
+				entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
+				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+			}
+			else
+			{
+				if (state == "StandDown" || state == "RunDown")
+				{
+					entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
+					m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+				}
+			}
 		}
 	}
 
@@ -331,28 +313,50 @@ void ScenePlay::sDebug()
 	}
 }
 
-void ScenePlay::spawnBullet()
+void ScenePlay::spawnSword()
 {
-	if (m_player->getComponent<CInput>().canshoot)
+	m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
+	m_sound.play();
+
+	auto entity = m_entities.addEntity("Sword");
+
+	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation("Sword"), false);
+	Vec2 refPos(m_player->getComponent<CTransform>().pos);
+	Vec2 boundingBoxSize;
+	
+	if (m_player->getComponent<CState>().state == "StandSide" || m_player->getComponent<CState>().state == "RunSide")
 	{
-		m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
-		m_sound.play();
-
-		auto entity = m_entities.addEntity("Bullet");
-
-		entity->addComponent<CAnimation>(m_game->getAssets().getAnimation("Bullet"), false);
-
-		Vec2 velocity(5.0f, 0.0f);
-
-		velocity *= m_player->getComponent<CTransform>().angle;
-
-		entity->addComponent<CTransform>(m_player->getComponent<CTransform>().pos, velocity);
-
-		entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y));
-
-		entity->addComponent<CLifespan>(50);
+		boundingBoxSize = Vec2(entity->getComponent<CAnimation>().animation.getSprite().getTexture()->getSize().x, entity->getComponent<CAnimation>().animation.getSprite().getTexture()->getSize().y);
+		if (m_player->getComponent<CTransform>().angle == 1.0f)
+		{
+			entity->getComponent<CAnimation>().animation.getSprite().setRotation(90.0f);
+			entity->addComponent<CTransform>(Vec2(refPos.x + 51.0f, refPos.y + 10.0f));
+		}
+		else if (m_player->getComponent<CTransform>().angle == -1.0f)
+		{
+			entity->getComponent<CAnimation>().animation.getSprite().setRotation(-90.0f);
+			entity->addComponent<CTransform>(Vec2(refPos.x - 51.0f, refPos.y + 10.0f));
+		}
+		entity->addComponent<CBoundingBox>(Vec2(boundingBoxSize.y, boundingBoxSize.x), sf::Color::Red);
 	}
-	m_player->getComponent<CInput>().canshoot = false;
+	else
+	{
+		boundingBoxSize = Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y);
+		if (m_player->getComponent<CState>().state == "StandUp" || m_player->getComponent<CState>().state == "RunUp")
+		{
+			entity->addComponent<CTransform>(Vec2(refPos.x + 12.0f, refPos.y - 28.0f));
+		}
+		else if (m_player->getComponent<CState>().state == "StandDown" || m_player->getComponent<CState>().state == "RunDown")
+		{
+			entity->getComponent<CAnimation>().animation.getSprite().setRotation(180.0f);
+			entity->addComponent<CTransform>(Vec2(refPos.x + 16.0f, refPos.y + 52.0f));
+		}
+		entity->addComponent<CBoundingBox>(boundingBoxSize, sf::Color::Red);
+	}
+
+	entity->addComponent<CLifespan>(0.25);
+
+	m_player->getComponent<CInput>().cancut = false;
 }
 
 void ScenePlay::sLifeSpan()
@@ -362,8 +366,12 @@ void ScenePlay::sLifeSpan()
 		if (entity->hasComponent<CLifespan>())
 		{
 			entity->getComponent<CLifespan>().remaining--;
-			if (entity->getComponent<CLifespan>().remaining <= 0)
+			if (entity->getComponent<CLifespan>().remaining <= 0.0f)
 			{
+				if (entity->tag() == "Sword")
+				{
+					m_player->getComponent<CInput>().cancut = true;
+				}
 				entity->destroy();
 			}
 		}
@@ -405,23 +413,6 @@ void ScenePlay::sDoAction(const Action& action)
 		{
 			m_paused = !m_paused;
 		}
-		if (action.name() == "SHOOT")
-		{
-			m_player->getComponent<CInput>().canshoot = false;
-		}
-
-		if (action.name() == "LEFT_CLICK")
-		{
-			Vec2 worldPos = windowToWorld(action.pos());
-			for (auto& e : m_entities.getEntities())
-			{
-				if (e->hasComponent<CDraggable>() && IsInside(worldPos, e))
-				{
-					std::cout << "Clicked Entity: " << e->getComponent<CAnimation>().animation.getName() << std::endl;
-					e->getComponent<CDraggable>().dragging = !e->getComponent<CDraggable>().dragging;
-				}
-			}
-		}
 
 		if (action.name() == "MOUSE_MOVE")
 		{
@@ -447,6 +438,14 @@ void ScenePlay::sDoAction(const Action& action)
 		else if (action.name() == "DOWN")
 		{
 			m_player->getComponent<CInput>().down = true;
+		}
+
+		if (action.name() == "LEFT_CLICK")
+		{
+			if (m_player->getComponent<CInput>().cancut)
+			{
+				spawnSword();
+			}
 		}
 	}
 
@@ -474,11 +473,6 @@ void ScenePlay::sDoAction(const Action& action)
 		{
 			m_player->getComponent<CState>().state = "StandDown";
 			m_player->getComponent<CInput>().down = false;
-		}
-
-		if (action.name() == "SHOOT")
-		{
-			m_player->getComponent<CInput>().canshoot = true;
 		}
 	}
 }
@@ -623,7 +617,6 @@ void ScenePlay::update() {
 		sMovement();
 		sCollision();
 		sAnimation();
-		spawnBullet();
 		sLifeSpan();
 		sDragAndDrop();
 	}
@@ -690,6 +683,10 @@ void ScenePlay::sMovement()
 		if (e->getComponent<CTransform>().velocity.x > 10)
 		{
 			e->getComponent<CTransform>().velocity.x = 10;
+		}
+		if (e->tag() == "Sword")
+		{
+			e->getComponent<CTransform>().velocity = playerVelocity;
 		}
 		e->getComponent<CTransform>().prevPos = e->getComponent<CTransform>().pos;
 		e->getComponent<CTransform>().pos += e->getComponent<CTransform>().velocity;

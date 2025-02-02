@@ -13,7 +13,7 @@ Entity::Entity(size_t id, const std::string& tag)
 void Entity::destroy()
 {
 	m_active = false;
-	std::cout << "Entity destroyed" << std::endl;
+	std::cout << m_tag << " destroyed" << std::endl;
 }
 
 const bool& Entity::isActive() const

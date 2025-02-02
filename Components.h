@@ -61,7 +61,7 @@ public:
 	bool down = false;
 	bool left = false;
 	bool right = false;
-	bool canshoot = false;
+	bool cancut = true;
 
 	CInput()
 	{
@@ -107,16 +107,16 @@ class CLifespan
 public:
 	bool has = false;
 
-	int total = 0;
-	int remaining = 0;
+	float total = 0.0f;
+	float remaining = 0.0f;
 
 	CLifespan()
 	{
 	}
 
-	CLifespan(int span, bool h = true)
-		: total(span)
-		, remaining(span)
+	CLifespan(float span, bool h = true)
+		: total(span*60.0f)
+		, remaining(span*60.0f)
 		, has(h)
 	{
 	}
@@ -129,20 +129,22 @@ public:
 
 	Vec2 boundingbox = { 0.0f, 0.0f };
 	Vec2 halfSize = { 0.0f, 0.0f };
+	sf::Color boxColor;
 	sf::RectangleShape rectangle;
 
 	CBoundingBox()
 	{
 	}
 
-	CBoundingBox(const Vec2& bbox, bool h = true)
+	CBoundingBox(const Vec2& bbox, const sf::Color& color = sf::Color::White, bool h = true)
 		: boundingbox(bbox)
+		, boxColor(color)
 		, has(h)
 		, halfSize(bbox / 2)
 	{
 		rectangle.setSize(sf::Vector2f(bbox.x, bbox.y));
 		rectangle.setFillColor(sf::Color::Transparent);
-		rectangle.setOutlineColor(sf::Color::White);
+		rectangle.setOutlineColor(sf::Color(boxColor));
 		rectangle.setOutlineThickness(1.0f);
 		rectangle.setOrigin(bbox.x / 2, bbox.y / 2);
 	}

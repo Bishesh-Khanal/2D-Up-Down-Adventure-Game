@@ -168,28 +168,10 @@ public:
 	}
 };
 
-class CGravity
-{
-public:
-	bool has = false;
-
-	float gravity = 0.0f;
-
-	CGravity()
-	{
-	}
-
-	CGravity(float grav, bool h = true)
-		: gravity(grav)
-		, has(h)
-	{
-	}
-};
-
 class CState
 {
 public:
-	std::string state = "Ground";
+	std::string state = "StandSide";
 	bool has = false;
 
 	CState()

@@ -9,9 +9,10 @@
 void ScenePlay::init(const std::string& levelPath)
 {
 	std::cout << "Game started" << std::endl;
-	registerAction(sf::Keyboard::W, "JUMP");
+	registerAction(sf::Keyboard::W, "UP");
 	registerAction(sf::Keyboard::A, "LEFT");
 	registerAction(sf::Keyboard::D, "RIGHT");
+	registerAction(sf::Keyboard::S, "DOWN");
 	registerAction(sf::Keyboard::Escape, "MENU");
 	registerAction(sf::Keyboard::Space, "PAUSE");
 	registerAction(sf::Keyboard::T, "TOGGLE_TEXTURE");
@@ -31,7 +32,7 @@ void ScenePlay::init(const std::string& levelPath)
 		entity->destroy();
 	}
 
-	loadLevel(levelPath);
+	//loadLevel(levelPath);
 
 	m_drawTextures = true;
 	m_drawCollision = false;
@@ -107,15 +108,13 @@ void ScenePlay::spawnPlayer()
 
 	m_player = m_entities.addEntity("Player");
 
-	m_player->addComponent<CAnimation>(m_game->getAssets().getAnimation("Jump"), false);
+	m_player->addComponent<CAnimation>(m_game->getAssets().getAnimation("StandSide"), false);
 
-	m_player->addComponent<CState>("Air");
+	m_player->addComponent<CState>("StandSide");
 
 	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 2, m_player)));
 
-	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x - 10, m_player->getComponent<CAnimation>().animation.getSize().y - 10));
-
-	m_player->addComponent<CGravity>(0.1f);
+	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x, m_player->getComponent<CAnimation>().animation.getSize().y));
 }
 
 Vec2 ScenePlay::gridtoMidPixel(float gridX, float gridY, std::shared_ptr<Entity> entity)
@@ -187,17 +186,29 @@ void ScenePlay::sAnimation()
 	auto& animComponent = m_player->getComponent<CAnimation>().animation;
 	const auto& stateComponent = m_player->getComponent<CState>();
 
-	if (stateComponent.state == "Air")
+	if (stateComponent.state == "RunUp")
 	{
-		animComponent = m_game->getAssets().getAnimation("Jump");
+		animComponent = m_game->getAssets().getAnimation("RunUp");
 	}
-	else if (stateComponent.state == "Run")
+	if (stateComponent.state == "RunSide")
 	{
-		animComponent = m_game->getAssets().getAnimation("Run");
+		animComponent = m_game->getAssets().getAnimation("RunSide");
 	}
-	else if (stateComponent.state == "Ground")
+	if (stateComponent.state == "RunDown")
 	{
-		animComponent = m_game->getAssets().getAnimation("Stand");
+		animComponent = m_game->getAssets().getAnimation("RunDown");
+	}
+	if (stateComponent.state == "StandUp")
+	{
+		animComponent = m_game->getAssets().getAnimation("StandUp");
+	}
+	if (stateComponent.state == "StandSide")
+	{
+		animComponent = m_game->getAssets().getAnimation("StandSide");
+	}
+	if (stateComponent.state == "StandDown")
+	{
+		animComponent = m_game->getAssets().getAnimation("StandDown");
 	}
 
 	animComponent.m_sprite.setScale(m_player->getComponent<CTransform>().angle, 1.0f);
@@ -420,53 +431,55 @@ void ScenePlay::sDoAction(const Action& action)
 
 		if (action.name() == "RIGHT")
 		{
+			m_player->getComponent<CState>().state = "RunSide";
 			m_player->getComponent<CInput>().right = true;
 			m_player->getComponent<CTransform>().angle = 1.0f;
-			if (m_verticalResolved)
-			{
-				m_player->getComponent<CState>().state = "Run";
-			}
 		}
 
 		if (action.name() == "LEFT")
 		{
+			m_player->getComponent<CState>().state = "RunSide";
 			m_player->getComponent<CInput>().left = true;
 			m_player->getComponent<CTransform>().angle = -1.0f;
-			if (m_verticalResolved)
-			{
-				m_player->getComponent<CState>().state = "Run";
-			}
 		}
 
-		if (action.name() == "JUMP")
+		if (action.name() == "UP")
 		{
-			if (m_verticalResolved)
-			{
-				m_player->getComponent<CState>().state = "Air";
-				m_player->getComponent<CInput>().up = true;
-			}
+			m_player->getComponent<CState>().state = "RunUp";
+			m_player->getComponent<CInput>().up = true;
+		}
+
+		if (action.name() == "DOWN")
+		{
+			m_player->getComponent<CState>().state = "RunDown";
+			m_player->getComponent<CInput>().down = true;
 		}
 	}
 
 	if (action.type() == "END")
 	{
-		if (m_verticalResolved)
-		{
-			m_player->getComponent<CState>().state = "Ground";
-		}
 		if (action.name() == "RIGHT")
 		{
+			m_player->getComponent<CState>().state = "StandSide";
 			m_player->getComponent<CInput>().right = false;
 		}
 
 		if (action.name() == "LEFT")
 		{
+			m_player->getComponent<CState>().state = "StandSide";
 			m_player->getComponent<CInput>().left = false;
 		}
 
-		if (action.name() == "JUMP")
+		if (action.name() == "UP")
 		{
+			m_player->getComponent<CState>().state = "StandUp";
 			m_player->getComponent<CInput>().up = false;
+		}
+
+		if (action.name() == "DOWN")
+		{
+			m_player->getComponent<CState>().state = "StandDown";
+			m_player->getComponent<CInput>().down = false;
 		}
 
 		if (action.name() == "SHOOT")
@@ -634,23 +647,24 @@ void ScenePlay::onEnd()
 
 void ScenePlay::sMovement()
 {
-	Vec2 playerVelocity(0, m_player->getComponent<CTransform>().velocity.y);
+	Vec2 playerVelocity(0, 0);
 
 	if (m_player->getComponent<CInput>().up)
 	{
-		m_sound.setBuffer(m_game->getAssets().getSound("Jump"));
-		m_sound.play();
-
-		playerVelocity.y = -4.1;
-		m_player->getComponent<CInput>().up = false;
+		playerVelocity.y = -2.0;
 	}
 
-	if (m_player->getComponent<CInput>().right)
+	else if (m_player->getComponent<CInput>().down)
+	{
+		playerVelocity.y = 2.0;
+	}
+
+	else if (m_player->getComponent<CInput>().right)
 	{
 		playerVelocity.x = 2.0;
 	}
 
-	if (m_player->getComponent<CInput>().left)
+	else if (m_player->getComponent<CInput>().left)
 	{
 		playerVelocity.x = -2.0;
 	}
@@ -665,19 +679,11 @@ void ScenePlay::sMovement()
 		playerVelocity.x = -0.1f;
 	}
 	*/
-	if (m_player->getComponent<CTransform>().pos.y + m_player->getComponent<CBoundingBox>().halfSize.y >= m_game->m_heightW)
-	{
-		init(m_levelPath);
-	}
 
 	m_player->getComponent<CTransform>().velocity = playerVelocity;
 
 	for (auto& e : m_entities.getEntities())
 	{
-		if (e->hasComponent<CGravity>())
-		{
-			e->getComponent<CTransform>().velocity.y += e->getComponent<CGravity>().gravity;
-		}
 		if (e->getComponent<CTransform>().velocity.y > 10)
 		{
 			e->getComponent<CTransform>().velocity.y = 10;

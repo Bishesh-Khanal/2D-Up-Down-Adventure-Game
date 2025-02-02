@@ -13,7 +13,6 @@ typedef std::tuple<
 	CInput,
 	CBoundingBox,
 	CAnimation,
-	CGravity,
 	CState,
 	CDraggable
 > ComponentTuple;

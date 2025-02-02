@@ -32,7 +32,7 @@ void ScenePlay::init(const std::string& levelPath)
 		entity->destroy();
 	}
 
-	//loadLevel(levelPath);
+	loadLevel(levelPath);
 
 	m_drawTextures = true;
 	m_drawCollision = false;
@@ -160,10 +160,9 @@ void ScenePlay::loadLevel(const std::string& level_path)
 
 			entity->addComponent<CTransform>(gridtoMidPixel(xAsset, yAsset, entity));
 
-			if (assetType == "Tile")
+			if (assetType == "Tile" || assetType == "Enemy")
 			{
-				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y));
-				entity->addComponent<CDraggable>(true);
+				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
 			}
 
 		}
@@ -477,21 +476,6 @@ void ScenePlay::sDoAction(const Action& action)
 	}
 }
 
-void ScenePlay::sDragAndDrop()
-{
-	for (auto& e : m_entities.getEntities())
-	{
-		if (e->hasComponent<CDraggable>() && e->getComponent<CDraggable>().dragging)
-		{
-			if (e->getComponent<CAnimation>().animation.getName() == "Block")
-			{
-				Vec2 worldPos = windowToWorld(m_mPos);
-				e->getComponent<CTransform>().pos = worldPos;
-			}
-		}
-	}
-}
-
 const ActionMap& ScenePlay::getActionMap() const
 {
 	return m_actionMap;
@@ -504,21 +488,20 @@ void ScenePlay::sCollision() {
 	m_horizontalResolved = false;
 	Vec2 totalAdjustment(0.0f, 0.0f);
 
-	for (auto& bullet : m_entities.getEntities("Bullet"))
+	for (auto& sword : m_entities.getEntities("Sword"))
 	{
-		for (auto& tile : m_entities.getEntities("Tile"))
+		for (auto& enemy : m_entities.getEntities("Enemy"))
 		{
-			Vec2 overlap = Physics::GetOverlap(bullet, tile);
+			Vec2 overlap = Physics::GetOverlap(sword, enemy);
 			if (overlap != Vec2(0.0f, 0.0f))
 			{
-				bullet->destroy();
-				if (tile->getComponent<CAnimation>().animation.getName() == "Brick")
+				if (enemy->getComponent<CAnimation>().animation.getName() == "Crab")
 				{
 					m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
 					m_sound.play();
-					tile->getComponent<CBoundingBox>().has = false;
-					tile->getComponent<CAnimation>().destroy = true;
-					tile->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
+					enemy->getComponent<CBoundingBox>().has = false;
+					enemy->getComponent<CAnimation>().destroy = true;
+					enemy->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
 				}
 				break;
 			}
@@ -618,7 +601,6 @@ void ScenePlay::update() {
 		sCollision();
 		sAnimation();
 		sLifeSpan();
-		sDragAndDrop();
 	}
 }
 

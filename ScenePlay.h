@@ -45,7 +45,6 @@ private:
 	void sMovement();
 	void sEnemySpawner();
 	void sCollision();
-	void sDragAndDrop();
 	void sDebug();
 	void sLifeSpan();
 

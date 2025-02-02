@@ -5,22 +5,6 @@
 #include "SFML/Graphics.hpp"
 #include "SFML/Audio.hpp"
 
-class CDraggable
-{
-public:
-	bool has = false;
-	bool dragging = false;
-
-	CDraggable()
-	{
-	}
-
-	CDraggable(bool h)
-		: has(h)
-	{
-	}
-};
-
 class CTransform
 {
 public:

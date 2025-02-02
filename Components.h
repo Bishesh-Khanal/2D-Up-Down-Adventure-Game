@@ -170,3 +170,37 @@ public:
 	{
 	}
 };
+
+class CHealthBar
+{
+public:
+	bool has = false;
+	size_t size = 0;
+	size_t remaining = 0;
+	sf::RectangleShape healthBar;
+	std::vector<sf::RectangleShape> healthBox;
+	int lastHurt = 0;
+
+	CHealthBar() {}
+
+	CHealthBar(size_t s, bool h = true)
+		: size(s)
+		, remaining(s)
+		, has(h)
+		, healthBox(s)
+	{
+		healthBar.setSize(sf::Vector2f(128.0f, 10.0f));
+		healthBar.setOrigin(64.0f, 5.0f);
+
+		float sizeBox = 128.0f / size;
+
+		for (auto& box : healthBox)
+		{
+			box.setSize(sf::Vector2f(sizeBox, 10.0f));
+			box.setOutlineColor(sf::Color::Black);
+			box.setOutlineThickness(1.0f);
+			box.setOrigin(sizeBox / 2.0f, 5.0f);
+		}
+	}
+};
+

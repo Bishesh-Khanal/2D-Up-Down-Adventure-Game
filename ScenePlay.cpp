@@ -115,6 +115,8 @@ void ScenePlay::spawnPlayer()
 	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 2, m_player)));
 
 	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x-10, m_player->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
+
+	m_player->addComponent<CHealthBar>(5);
 }
 
 Vec2 ScenePlay::gridtoMidPixel(float gridX, float gridY, std::shared_ptr<Entity> entity)
@@ -152,8 +154,9 @@ void ScenePlay::loadLevel(const std::string& level_path)
 		std::istringstream lineStream(line);
 		std::string assetType, nameAsset;
 		float xAsset, yAsset;
+		size_t healthBarSize;
 
-		if (lineStream >> assetType >> nameAsset >> xAsset >> yAsset)
+		if (lineStream >> assetType >> nameAsset >> xAsset >> yAsset >> healthBarSize)
 		{
 			auto entity = m_entities.addEntity(assetType);
 			entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(nameAsset), false);
@@ -163,6 +166,10 @@ void ScenePlay::loadLevel(const std::string& level_path)
 			if (assetType == "Tile" || assetType == "Enemy")
 			{
 				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
+				if (assetType == "Enemy")
+				{
+					entity->addComponent<CHealthBar>(healthBarSize);
+				}
 			}
 
 		}
@@ -252,6 +259,32 @@ void ScenePlay::sDebug()
 			{
 				entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
 				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
+
+				if (entity->hasComponent<CHealthBar>())
+				{
+					auto& healthBarComp = entity->getComponent<CHealthBar>();
+					healthBarComp.healthBar.setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y - 38.0f);
+
+					Vec2 refPos(healthBarComp.healthBar.getPosition().x, healthBarComp.healthBar.getPosition().y);
+					float begin = refPos.x - (healthBarComp.healthBar.getSize().x/2.0f);
+
+					for (size_t i = 0; i < healthBarComp.size; i++)
+					{
+						begin += (healthBarComp.healthBox[i].getSize().x / 2.0f);
+						healthBarComp.healthBox[i].setPosition(begin, refPos.y);
+						if (healthBarComp.remaining > i)
+						{
+							healthBarComp.healthBox[i].setFillColor(sf::Color::Red);
+						}
+						else
+						{
+							healthBarComp.healthBox[i].setFillColor(sf::Color::Transparent);
+						}
+						m_game->m_window.draw(healthBarComp.healthBox[i]);
+						begin += (healthBarComp.healthBox[i].getSize().x / 2.0f);
+					}
+
+				}
 			}
 			else
 			{
@@ -481,6 +514,23 @@ const ActionMap& ScenePlay::getActionMap() const
 	return m_actionMap;
 }
 
+void ScenePlay::damage(std::shared_ptr<Entity> entity)
+{
+	if (m_currentFrame - entity->getComponent<CHealthBar>().lastHurt >= 15)
+	{
+		entity->getComponent<CHealthBar>().lastHurt = m_currentFrame;
+		entity->getComponent<CHealthBar>().remaining--;
+		if (entity->getComponent<CHealthBar>().remaining == 0)
+		{
+			m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
+			m_sound.play();
+			entity->getComponent<CBoundingBox>().has = false;
+			entity->getComponent<CAnimation>().destroy = true;
+			entity->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
+		}
+	}
+}
+
 void ScenePlay::sCollision() {
 	const float EPSILON = 1e-5f;
 
@@ -495,19 +545,12 @@ void ScenePlay::sCollision() {
 			Vec2 overlap = Physics::GetOverlap(sword, enemy);
 			if (overlap != Vec2(0.0f, 0.0f))
 			{
-				if (enemy->getComponent<CAnimation>().animation.getName() == "Crab")
-				{
-					m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
-					m_sound.play();
-					enemy->getComponent<CBoundingBox>().has = false;
-					enemy->getComponent<CAnimation>().destroy = true;
-					enemy->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
-				}
+				damage(enemy);
 				break;
 			}
 		}
 	}
-
+	
 	for (auto& tile : m_entities.getEntities("Tile")) {
 		Vec2 overlap = Physics::GetOverlap(m_player, tile);
 		if (overlap != Vec2(0.0f, 0.0f)) {

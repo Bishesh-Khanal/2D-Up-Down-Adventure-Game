@@ -54,6 +54,7 @@ private:
 	Vec2 windowToWorld(const Vec2&) const;
 	Vec2 gridtoMidPixel(float, float, std::shared_ptr<Entity>);
 	void spawnSword();
+	void damage(std::shared_ptr<Entity>);
 
 public:
 	ScenePlay(std::shared_ptr<GameEngine>, const std::string&);

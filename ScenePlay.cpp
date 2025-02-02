@@ -431,27 +431,21 @@ void ScenePlay::sDoAction(const Action& action)
 
 		if (action.name() == "RIGHT")
 		{
-			m_player->getComponent<CState>().state = "RunSide";
 			m_player->getComponent<CInput>().right = true;
-			m_player->getComponent<CTransform>().angle = 1.0f;
 		}
 
-		if (action.name() == "LEFT")
+		else if (action.name() == "LEFT")
 		{
-			m_player->getComponent<CState>().state = "RunSide";
 			m_player->getComponent<CInput>().left = true;
-			m_player->getComponent<CTransform>().angle = -1.0f;
 		}
 
-		if (action.name() == "UP")
+		else if (action.name() == "UP")
 		{
-			m_player->getComponent<CState>().state = "RunUp";
 			m_player->getComponent<CInput>().up = true;
 		}
 
-		if (action.name() == "DOWN")
+		else if (action.name() == "DOWN")
 		{
-			m_player->getComponent<CState>().state = "RunDown";
 			m_player->getComponent<CInput>().down = true;
 		}
 	}
@@ -464,19 +458,19 @@ void ScenePlay::sDoAction(const Action& action)
 			m_player->getComponent<CInput>().right = false;
 		}
 
-		if (action.name() == "LEFT")
+		else if (action.name() == "LEFT")
 		{
 			m_player->getComponent<CState>().state = "StandSide";
 			m_player->getComponent<CInput>().left = false;
 		}
 
-		if (action.name() == "UP")
+		else if (action.name() == "UP")
 		{
 			m_player->getComponent<CState>().state = "StandUp";
 			m_player->getComponent<CInput>().up = false;
 		}
 
-		if (action.name() == "DOWN")
+		else if (action.name() == "DOWN")
 		{
 			m_player->getComponent<CState>().state = "StandDown";
 			m_player->getComponent<CInput>().down = false;
@@ -648,25 +642,30 @@ void ScenePlay::onEnd()
 void ScenePlay::sMovement()
 {
 	Vec2 playerVelocity(0, 0);
-
-	if (m_player->getComponent<CInput>().up)
-	{
-		playerVelocity.y = -2.0;
-	}
-
-	else if (m_player->getComponent<CInput>().down)
-	{
-		playerVelocity.y = 2.0;
-	}
-
-	else if (m_player->getComponent<CInput>().right)
+	if (m_player->getComponent<CInput>().right)
 	{
 		playerVelocity.x = 2.0;
+		m_player->getComponent<CState>().state = "RunSide";
+		m_player->getComponent<CTransform>().angle = 1.0f;
 	}
 
 	else if (m_player->getComponent<CInput>().left)
 	{
 		playerVelocity.x = -2.0;
+		m_player->getComponent<CState>().state = "RunSide";
+		m_player->getComponent<CTransform>().angle = -1.0f;
+	}
+
+	else if (m_player->getComponent<CInput>().up)
+	{
+		playerVelocity.y = -2.0;
+		m_player->getComponent<CState>().state = "RunUp";
+	}
+
+	else if (m_player->getComponent<CInput>().down)
+	{
+		playerVelocity.y = 2.0;
+		m_player->getComponent<CState>().state = "RunDown";
 	}
 
 	if (m_player->getComponent<CTransform>().pos.x - m_player->getComponent<CBoundingBox>().halfSize.x <= 0)

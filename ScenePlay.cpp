@@ -156,12 +156,13 @@ void ScenePlay::loadLevel(const std::string& level_path)
 		std::string assetType, nameAsset, patrolType, chaseType, color, xAsset, yAsset;
 		size_t healthBarSize;
 		int damage;
+		float speed;
 
-		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color >> damage)
+		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color >> damage >> speed)
 		{
 			if (assetType == "Enemy")
 			{
-				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color, damage);
+				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color, damage, speed);
 			}
 			else
 			{
@@ -222,7 +223,7 @@ std::vector<float> ScenePlay::parseValues(const std::string& str) {
 	return values;
 }
 
-void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color, int damage)
+void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color, int damage, float speed)
 {
 	std::shared_ptr<Entity> entity = m_entities.addEntity("Enemy");
 	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(name), false);
@@ -264,6 +265,8 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, c
 	entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
 
 	entity->addComponent<CDamage>(damage);
+
+	entity->getComponent<CTransform>().speed = speed;
 }
 
 ScenePlay::ScenePlay(std::shared_ptr<GameEngine> game, const std::string& level_path)
@@ -628,6 +631,8 @@ void ScenePlay::damage(std::shared_ptr<Entity> entity, int safe, int damage = 1)
 				m_sound.play();
 				entity->getComponent<CBoundingBox>().has = false;
 				entity->getComponent<CHealthBar>().has = false;
+				entity->getComponent<CChase>().has = false;
+				entity->getComponent<CPatrol>().has = false;
 				entity->getComponent<CAnimation>().destroy = true;
 				entity->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
 			}
@@ -903,7 +908,7 @@ void ScenePlay::sMovement()
 						second = Vec2(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
 						theta = second.angle(first);
 					}
-					e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+					e->getComponent<CTransform>().velocity = Vec2(e->getComponent<CTransform>().speed*cos(theta), e->getComponent<CTransform>().speed*sin(theta));
 				}
 			}
 			if (e->hasComponent<CChase>())
@@ -917,7 +922,7 @@ void ScenePlay::sMovement()
 					float theta = Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).angle(e->getComponent<CTransform>().pos);
 					if (Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).distq(e->getComponent<CTransform>().pos) > 0.5f)
 					{
-						e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+						e->getComponent<CTransform>().velocity = Vec2(e->getComponent<CTransform>().speed * cos(theta), e->getComponent<CTransform>().speed * sin(theta));
 					}
 					else {
 						e->getComponent<CTransform>().velocity = Vec2(0, 0);
@@ -927,7 +932,7 @@ void ScenePlay::sMovement()
 				else
 				{
 					float theta = m_player->getComponent<CTransform>().pos.angle(e->getComponent<CTransform>().pos);
-					e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+					e->getComponent<CTransform>().velocity = Vec2(e->getComponent<CTransform>().speed * cos(theta), e->getComponent<CTransform>().speed * sin(theta));
 					patrolComponent.patrolling = false;
 				}
 			}

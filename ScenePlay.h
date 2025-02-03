@@ -13,6 +13,11 @@ private:
 		std::string WEAPON;
 	};
 
+	struct Intersect
+	{
+		bool result;
+	};
+
 	std::string				m_levelPath;
 	std::shared_ptr<Entity>	m_player;
 	PlayerConfig			m_playerConfig;
@@ -58,6 +63,7 @@ private:
 	Vec2 gridtoMidPixel(float, float, std::shared_ptr<Entity>);
 	void spawnSword();
 	void damage(std::shared_ptr<Entity>);
+	Intersect intersection(const Vec2&, const Vec2&);
 
 public:
 	ScenePlay(std::shared_ptr<GameEngine>, const std::string&);

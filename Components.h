@@ -212,6 +212,7 @@ public:
 	std::vector<Vec2> patrolPoints;
 	std::vector<sf::CircleShape> patrolReference;
 	size_t current = 0;
+	size_t lastCurrent = 0;
 
 	CPatrol()
 	{
@@ -230,5 +231,22 @@ public:
 			patrolReference[i].setFillColor(sf::Color::Black);
 			patrolReference[i].setPosition(patrolPoints[i].x * 64.0f + 32.0f, patrolPoints[i].y * 64.0f + 32.0f);
 		}
+	}
+};
+
+class CChase
+{
+public:
+	bool has = false;
+	bool chasing = false;
+	sf::Vertex line[2];
+
+	CChase()
+	{
+	}
+
+	CChase(bool h)
+		:has(h)
+	{
 	}
 };

@@ -36,7 +36,7 @@ void ScenePlay::init(const std::string& levelPath)
 	loadLevel(levelPath);
 
 	m_drawTextures = true;
-	m_drawCollision = false;
+	m_drawCollision = true;
 	m_drawGrid = false;
 	m_verticalResolved = false;
 	m_horizontalResolved = false;
@@ -223,7 +223,7 @@ std::vector<float> ScenePlay::parseValues(const std::string& str) {
 
 void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color)
 {
-	auto entity = m_entities.addEntity("Enemy");
+	std::shared_ptr<Entity> entity = m_entities.addEntity("Enemy");
 	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(name), false);
 	
 	if (patrol == "NonPatrol")
@@ -249,6 +249,11 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, c
 
 		entity->addComponent<CPatrol>(patrolPoints);
 		entity->addComponent<CTransform>(gridtoMidPixel(patrolPoints[0].x, patrolPoints[0].y, entity));
+	}
+
+	if (chase == "Chase")
+	{
+		entity->addComponent<CChase>(true);
 	}
 
 	entity->addComponent<CHealthBar>(health);
@@ -428,6 +433,11 @@ void ScenePlay::sDebug()
 					m_game->m_window.draw(patrolComponent.patrolReference[i]);
 				}
 			}
+
+			if (entity->hasComponent<CChase>())
+			{
+				m_game->m_window.draw(entity->getComponent<CChase>().line, 2, sf::Lines);
+			}
 		}
 	}
 }
@@ -437,7 +447,7 @@ void ScenePlay::spawnSword()
 	m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
 	m_sound.play();
 
-	auto entity = m_entities.addEntity("Sword");
+	std::shared_ptr<Entity> entity = m_entities.addEntity("Sword");
 
 	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation("Sword"), false);
 	Vec2 refPos(m_player->getComponent<CTransform>().pos);
@@ -745,6 +755,51 @@ void ScenePlay::onEnd()
 	m_game->changeScene("MENU", std::make_shared<SceneMenu>(m_game));
 }
 
+ScenePlay::Intersect ScenePlay::intersection(const Vec2& a, const Vec2& b)
+{
+	Vec2 r = b - a;
+	Vec2 c, d;
+
+	std::vector<Vec2> points(4);
+	for (auto& entity : m_entities.getEntities())
+	{
+		if (entity->tag() != "Player")
+		{
+			if (entity->hasComponent<CBoundingBox>())
+			{
+				auto& boundComponent = entity->getComponent<CBoundingBox>();
+				if (boundComponent.rectangle.getOutlineColor() == sf::Color::Black || boundComponent.rectangle.getOutlineColor() == sf::Color::Red)
+				{
+
+					points[0] = Vec2(boundComponent.rectangle.getPosition().x - boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y - boundComponent.halfSize.y);
+					points[1] = Vec2(boundComponent.rectangle.getPosition().x + boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y - boundComponent.halfSize.y);
+					points[2] = Vec2(boundComponent.rectangle.getPosition().x + boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y + boundComponent.halfSize.y);
+					points[3] = Vec2(boundComponent.rectangle.getPosition().x - boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y + boundComponent.halfSize.y);
+
+					for (int i = 0; i < 4; i++)
+					{
+						c = points[i];
+						d = points[(i + 1) % 4];
+						Vec2 s = d - c;
+						float rxs = r.x * s.y - r.y * s.x;
+
+						if (rxs == 0) continue; // Parallel lines
+
+						Vec2 cma = c - a;
+						float t = (cma.x * s.y - cma.y * s.x) / rxs;
+						float u = (cma.x * r.y - cma.y * r.x) / rxs;
+						if ((t > 0 && t < 1) && (u > 0 && u < 1))
+						{
+							return { true };
+						}
+					}
+				}
+			}
+		}
+	}
+	return { false };
+}
+
 void ScenePlay::sMovement()
 {
 	Vec2 playerVelocity(0, 0);
@@ -801,19 +856,20 @@ void ScenePlay::sMovement()
 		{
 			e->getComponent<CTransform>().velocity = playerVelocity;
 		}
+		
 		if (e->tag() == "Enemy")
 		{
 			auto& patrolComponent = e->getComponent<CPatrol>();
 			size_t size = patrolComponent.patrolPoints.size();
-			float theta;
 			if (patrolComponent.patrolling)
 			{
 				if (patrolComponent.patrolPoints.size() > 1)
 				{
+					float theta;
 					Vec2 first(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
 					Vec2 second(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
 					theta = second.angle(first);
-					if (second.distq(e->getComponent<CTransform>().pos) <= 1.0f)
+					if (second.distq(e->getComponent<CTransform>().pos) <= 0.5f)
 					{
 						patrolComponent.current = (patrolComponent.current + 1) % size;
 						first = Vec2(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
@@ -823,7 +879,33 @@ void ScenePlay::sMovement()
 					e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
 				}
 			}
+			if (e->hasComponent<CChase>())
+			{
+				auto& chaseComponent = e->getComponent<CChase>();
+				chaseComponent.line[0] = sf::Vertex(sf::Vector2f(e->getComponent<CTransform>().pos.x, e->getComponent<CTransform>().pos.y), sf::Color::Black);
+				chaseComponent.line[1] = sf::Vertex(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y), sf::Color::Black);
+				ScenePlay::Intersect intersectResult = intersection(e->getComponent<CTransform>().pos, m_player->getComponent<CTransform>().pos);
+				if (intersectResult.result)
+				{
+					float theta = Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).angle(e->getComponent<CTransform>().pos);
+					if (Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).distq(e->getComponent<CTransform>().pos) > 0.5f)
+					{
+						e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+					}
+					else {
+						e->getComponent<CTransform>().velocity = Vec2(0, 0);
+					}
+					patrolComponent.patrolling = true;
+				}
+				else
+				{
+					float theta = m_player->getComponent<CTransform>().pos.angle(e->getComponent<CTransform>().pos);
+					e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+					patrolComponent.patrolling = false;
+				}
+			}
 		}
+
 		e->getComponent<CTransform>().prevPos = e->getComponent<CTransform>().pos;
 		e->getComponent<CTransform>().pos += e->getComponent<CTransform>().velocity;
 	}
@@ -859,3 +941,7 @@ void ScenePlay::sRender()
 
 	m_game->m_window.display();
 }
+
+/*
+
+*/

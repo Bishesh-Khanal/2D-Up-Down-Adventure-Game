@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 void ScenePlay::init(const std::string& levelPath)
 {
@@ -152,23 +153,27 @@ void ScenePlay::loadLevel(const std::string& level_path)
 		}
 
 		std::istringstream lineStream(line);
-		std::string assetType, nameAsset;
-		float xAsset, yAsset;
+		std::string assetType, nameAsset, patrolType, chaseType, color, xAsset, yAsset;
 		size_t healthBarSize;
 
-		if (lineStream >> assetType >> nameAsset >> xAsset >> yAsset >> healthBarSize)
+		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color)
 		{
-			auto entity = m_entities.addEntity(assetType);
-			entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(nameAsset), false);
-
-			entity->addComponent<CTransform>(gridtoMidPixel(xAsset, yAsset, entity));
-
-			if (assetType == "Tile" || assetType == "Enemy")
+			if (assetType == "Enemy")
 			{
-				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
-				if (assetType == "Enemy")
+				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color);
+			}
+			else
+			{
+				auto entity = m_entities.addEntity(assetType);
+				entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(nameAsset), false);
+
+				entity->addComponent<CTransform>(gridtoMidPixel(std::stof(xAsset), std::stof(yAsset), entity));
+
+				if (assetType == "Tile")
 				{
-					entity->addComponent<CHealthBar>(healthBarSize);
+					sf::Color colorName;
+					selectColor(color, colorName);
+					entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
 				}
 			}
 
@@ -178,6 +183,79 @@ void ScenePlay::loadLevel(const std::string& level_path)
 			std::cerr << "Malformed line" << std::endl;
 		}
 	}
+}
+
+void ScenePlay::selectColor(const std::string& color, sf::Color& colorName)
+{
+	if (color == "Black")
+	{
+		colorName = sf::Color::Black;
+	}
+
+	if (color == "Red")
+	{
+		colorName = sf::Color::Red;
+	}
+	
+	if (color == "Blue")
+	{
+		colorName = sf::Color::Blue;
+	}
+
+	if (color == "White")
+	{
+		colorName = sf::Color::White;
+	}
+}
+
+std::vector<float> ScenePlay::parseValues(const std::string& str) {
+	std::vector<float> values;
+	std::stringstream ss(str);
+	std::string temp;
+
+	while (std::getline(ss, temp, ',')) {
+		if (!temp.empty()) {
+			values.push_back(std::stof(temp));
+		}
+	}
+	return values;
+}
+
+void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color)
+{
+	auto entity = m_entities.addEntity("Enemy");
+	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(name), false);
+	
+	if (patrol == "NonPatrol")
+	{
+		std::vector<Vec2> patrolPoints;
+		patrolPoints.push_back(Vec2(std::stof(xPos), std::stof(yPos)));
+		entity->addComponent<CPatrol>(patrolPoints);
+		entity->addComponent<CTransform>(gridtoMidPixel(patrolPoints[0].x, patrolPoints[0].y, entity));
+	}
+	else
+	{
+		std::vector<float> xValues = parseValues(xPos);
+		std::vector<float> yValues = parseValues(yPos);
+
+		if (xValues.size() != yValues.size()) {
+			std::cerr << "Error: Mismatched number of X and Y coordinates!" << std::endl;
+		}
+
+		std::vector<Vec2> patrolPoints;
+		for (size_t i = 0; i < xValues.size(); i++) {
+			patrolPoints.push_back({ xValues[i], yValues[i] });
+		}
+
+		entity->addComponent<CPatrol>(patrolPoints);
+		entity->addComponent<CTransform>(gridtoMidPixel(patrolPoints[0].x, patrolPoints[0].y, entity));
+	}
+
+	entity->addComponent<CHealthBar>(health);
+
+	sf::Color colorName;
+	selectColor(color, colorName);
+	entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
 }
 
 ScenePlay::ScenePlay(std::shared_ptr<GameEngine> game, const std::string& level_path)
@@ -243,7 +321,7 @@ void ScenePlay::sDebug()
 
 	if (m_drawTextures)
 	{
-		setView(m_playerView, m_player->getComponent<CTransform>().velocity.x);
+		//setView(m_playerView, m_player->getComponent<CTransform>().velocity.x);
 		std::string state = m_player->getComponent<CState>().state;
 		for (auto& entity : m_entities.getEntities("Sword"))
 		{
@@ -340,6 +418,15 @@ void ScenePlay::sDebug()
 			{
 				entity->getComponent<CBoundingBox>().rectangle.setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
 				m_game->m_window.draw(entity->getComponent<CBoundingBox>().rectangle);
+			}
+
+			if (entity->hasComponent<CPatrol>())
+			{
+				auto& patrolComponent = entity->getComponent<CPatrol>();
+				for (size_t i = 0; i < patrolComponent.patrolReference.size(); i++)
+				{
+					m_game->m_window.draw(patrolComponent.patrolReference[i]);
+				}
 			}
 		}
 	}
@@ -525,6 +612,7 @@ void ScenePlay::damage(std::shared_ptr<Entity> entity)
 			m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
 			m_sound.play();
 			entity->getComponent<CBoundingBox>().has = false;
+			entity->getComponent<CHealthBar>().has = false;
 			entity->getComponent<CAnimation>().destroy = true;
 			entity->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
 		}
@@ -662,27 +750,27 @@ void ScenePlay::sMovement()
 	Vec2 playerVelocity(0, 0);
 	if (m_player->getComponent<CInput>().right)
 	{
-		playerVelocity.x = 2.0;
+		playerVelocity.x = 4.0;
 		m_player->getComponent<CState>().state = "RunSide";
 		m_player->getComponent<CTransform>().angle = 1.0f;
 	}
 
 	else if (m_player->getComponent<CInput>().left)
 	{
-		playerVelocity.x = -2.0;
+		playerVelocity.x = -4.0;
 		m_player->getComponent<CState>().state = "RunSide";
 		m_player->getComponent<CTransform>().angle = -1.0f;
 	}
 
 	else if (m_player->getComponent<CInput>().up)
 	{
-		playerVelocity.y = -2.0;
+		playerVelocity.y = -4.0;
 		m_player->getComponent<CState>().state = "RunUp";
 	}
 
 	else if (m_player->getComponent<CInput>().down)
 	{
-		playerVelocity.y = 2.0;
+		playerVelocity.y = 4.0;
 		m_player->getComponent<CState>().state = "RunDown";
 	}
 
@@ -690,12 +778,12 @@ void ScenePlay::sMovement()
 	{
 		playerVelocity.x = 0.1f;
 	}
-	/*
+	
 	if (m_player->getComponent<CTransform>().pos.x + m_player->getComponent<CBoundingBox>().halfSize.x >= m_game->m_widthW)
 	{
 		playerVelocity.x = -0.1f;
 	}
-	*/
+	
 
 	m_player->getComponent<CTransform>().velocity = playerVelocity;
 
@@ -712,6 +800,29 @@ void ScenePlay::sMovement()
 		if (e->tag() == "Sword")
 		{
 			e->getComponent<CTransform>().velocity = playerVelocity;
+		}
+		if (e->tag() == "Enemy")
+		{
+			auto& patrolComponent = e->getComponent<CPatrol>();
+			size_t size = patrolComponent.patrolPoints.size();
+			float theta;
+			if (patrolComponent.patrolling)
+			{
+				if (patrolComponent.patrolPoints.size() > 1)
+				{
+					Vec2 first(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
+					Vec2 second(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
+					theta = second.angle(first);
+					if (second.distq(e->getComponent<CTransform>().pos) <= 1.0f)
+					{
+						patrolComponent.current = (patrolComponent.current + 1) % size;
+						first = Vec2(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
+						second = Vec2(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
+						theta = second.angle(first);
+					}
+					e->getComponent<CTransform>().velocity = Vec2(cos(theta), sin(theta));
+				}
+			}
 		}
 		e->getComponent<CTransform>().prevPos = e->getComponent<CTransform>().pos;
 		e->getComponent<CTransform>().pos += e->getComponent<CTransform>().velocity;

@@ -204,3 +204,31 @@ public:
 	}
 };
 
+class CPatrol
+{
+public:
+	bool has = false;
+	bool patrolling = true;
+	std::vector<Vec2> patrolPoints;
+	std::vector<sf::CircleShape> patrolReference;
+	size_t current = 0;
+
+	CPatrol()
+	{
+	}
+
+	CPatrol(std::vector<Vec2> patrol, bool p = true, bool h = true)
+		: patrolPoints(patrol)
+		, has(h)
+		, patrolling(p)
+		, patrolReference(patrol.size())
+	{
+		for (size_t i = 0; i < patrol.size(); i++)
+		{
+			patrolReference[i].setRadius(4);
+			patrolReference[i].setOrigin(2, 2);
+			patrolReference[i].setFillColor(sf::Color::Black);
+			patrolReference[i].setPosition(patrolPoints[i].x * 64.0f + 32.0f, patrolPoints[i].y * 64.0f + 32.0f);
+		}
+	}
+};

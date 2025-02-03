@@ -51,6 +51,9 @@ private:
 	void loadLevel(const std::string&);
 	void setView(sf::View&, float);
 	void spawnPlayer();
+	void spawnEnemy(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, size_t, const std::string&);
+	std::vector<float> parseValues(const std::string&);
+	void selectColor(const std::string&, sf::Color&);
 	Vec2 windowToWorld(const Vec2&) const;
 	Vec2 gridtoMidPixel(float, float, std::shared_ptr<Entity>);
 	void spawnSword();

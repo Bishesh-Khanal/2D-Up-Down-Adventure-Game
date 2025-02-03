@@ -23,4 +23,5 @@ public:
 	void operator /= (float);
 
 	float distq(const Vec2&) const;
+	float angle(const Vec2&) const;
 };

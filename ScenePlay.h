@@ -56,13 +56,13 @@ private:
 	void loadLevel(const std::string&);
 	void setView(sf::View&, float);
 	void spawnPlayer();
-	void spawnEnemy(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, size_t, const std::string&);
+	void spawnEnemy(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, size_t, const std::string&, int);
 	std::vector<float> parseValues(const std::string&);
 	void selectColor(const std::string&, sf::Color&);
 	Vec2 windowToWorld(const Vec2&) const;
 	Vec2 gridtoMidPixel(float, float, std::shared_ptr<Entity>);
 	void spawnSword();
-	void damage(std::shared_ptr<Entity>);
+	void damage(std::shared_ptr<Entity>, int , int);
 	Intersect intersection(const Vec2&, const Vec2&);
 
 public:

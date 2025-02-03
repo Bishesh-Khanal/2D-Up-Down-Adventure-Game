@@ -175,15 +175,15 @@ class CHealthBar
 {
 public:
 	bool has = false;
-	size_t size = 0;
-	size_t remaining = 0;
+	int size = 0;
+	int remaining = 0;
 	sf::RectangleShape healthBar;
 	std::vector<sf::RectangleShape> healthBox;
 	int lastHurt = 0;
 
 	CHealthBar() {}
 
-	CHealthBar(size_t s, bool h = true)
+	CHealthBar(int s, bool h = true)
 		: size(s)
 		, remaining(s)
 		, has(h)
@@ -212,7 +212,6 @@ public:
 	std::vector<Vec2> patrolPoints;
 	std::vector<sf::CircleShape> patrolReference;
 	size_t current = 0;
-	size_t lastCurrent = 0;
 
 	CPatrol()
 	{
@@ -238,7 +237,6 @@ class CChase
 {
 public:
 	bool has = false;
-	bool chasing = false;
 	sf::Vertex line[2];
 
 	CChase()
@@ -248,5 +246,23 @@ public:
 	CChase(bool h)
 		:has(h)
 	{
+	}
+};
+
+class CDamage
+{
+public:
+	bool has = false;
+	size_t damage = 0;
+
+	CDamage()
+	{
+	}
+
+	CDamage(size_t d, bool h = true)
+		: damage(d)
+		, has(h)
+	{
+
 	}
 };

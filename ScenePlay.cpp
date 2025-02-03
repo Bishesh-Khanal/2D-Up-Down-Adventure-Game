@@ -155,12 +155,13 @@ void ScenePlay::loadLevel(const std::string& level_path)
 		std::istringstream lineStream(line);
 		std::string assetType, nameAsset, patrolType, chaseType, color, xAsset, yAsset;
 		size_t healthBarSize;
+		int damage;
 
-		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color)
+		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color >> damage)
 		{
 			if (assetType == "Enemy")
 			{
-				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color);
+				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color, damage);
 			}
 			else
 			{
@@ -221,7 +222,7 @@ std::vector<float> ScenePlay::parseValues(const std::string& str) {
 	return values;
 }
 
-void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color)
+void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color, int damage)
 {
 	std::shared_ptr<Entity> entity = m_entities.addEntity("Enemy");
 	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(name), false);
@@ -261,6 +262,8 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, c
 	sf::Color colorName;
 	selectColor(color, colorName);
 	entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
+
+	entity->addComponent<CDamage>(damage);
 }
 
 ScenePlay::ScenePlay(std::shared_ptr<GameEngine> game, const std::string& level_path)
@@ -351,7 +354,7 @@ void ScenePlay::sDebug()
 					Vec2 refPos(healthBarComp.healthBar.getPosition().x, healthBarComp.healthBar.getPosition().y);
 					float begin = refPos.x - (healthBarComp.healthBar.getSize().x/2.0f);
 
-					for (size_t i = 0; i < healthBarComp.size; i++)
+					for (int i = 0; i < healthBarComp.size; i++)
 					{
 						begin += (healthBarComp.healthBox[i].getSize().x / 2.0f);
 						healthBarComp.healthBox[i].setPosition(begin, refPos.y);
@@ -421,7 +424,6 @@ void ScenePlay::sDebug()
 		{
 			if (entity->hasComponent<CBoundingBox>())
 			{
-				entity->getComponent<CBoundingBox>().rectangle.setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
 				m_game->m_window.draw(entity->getComponent<CBoundingBox>().rectangle);
 			}
 
@@ -466,7 +468,7 @@ void ScenePlay::spawnSword()
 			entity->getComponent<CAnimation>().animation.getSprite().setRotation(-90.0f);
 			entity->addComponent<CTransform>(Vec2(refPos.x - 51.0f, refPos.y + 10.0f));
 		}
-		entity->addComponent<CBoundingBox>(Vec2(boundingBoxSize.y, boundingBoxSize.x), sf::Color::Red);
+		entity->addComponent<CBoundingBox>(Vec2(boundingBoxSize.y, boundingBoxSize.x), sf::Color::Blue);
 	}
 	else
 	{
@@ -480,10 +482,11 @@ void ScenePlay::spawnSword()
 			entity->getComponent<CAnimation>().animation.getSprite().setRotation(180.0f);
 			entity->addComponent<CTransform>(Vec2(refPos.x + 16.0f, refPos.y + 52.0f));
 		}
-		entity->addComponent<CBoundingBox>(boundingBoxSize, sf::Color::Red);
+		entity->addComponent<CBoundingBox>(boundingBoxSize, sf::Color::Blue);
 	}
 
 	entity->addComponent<CLifespan>(0.25);
+	entity->addComponent<CDamage>(1);
 
 	m_player->getComponent<CInput>().cancut = false;
 }
@@ -611,20 +614,27 @@ const ActionMap& ScenePlay::getActionMap() const
 	return m_actionMap;
 }
 
-void ScenePlay::damage(std::shared_ptr<Entity> entity)
+void ScenePlay::damage(std::shared_ptr<Entity> entity, int safe, int damage = 1)
 {
-	if (m_currentFrame - entity->getComponent<CHealthBar>().lastHurt >= 15)
+	if (m_currentFrame - entity->getComponent<CHealthBar>().lastHurt >= safe)
 	{
 		entity->getComponent<CHealthBar>().lastHurt = m_currentFrame;
-		entity->getComponent<CHealthBar>().remaining--;
-		if (entity->getComponent<CHealthBar>().remaining == 0)
+		entity->getComponent<CHealthBar>().remaining -= damage;
+		if (entity->getComponent<CHealthBar>().remaining <= 0)
 		{
-			m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
-			m_sound.play();
-			entity->getComponent<CBoundingBox>().has = false;
-			entity->getComponent<CHealthBar>().has = false;
-			entity->getComponent<CAnimation>().destroy = true;
-			entity->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
+			if (entity->tag() != "Player")
+			{
+				m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
+				m_sound.play();
+				entity->getComponent<CBoundingBox>().has = false;
+				entity->getComponent<CHealthBar>().has = false;
+				entity->getComponent<CAnimation>().destroy = true;
+				entity->getComponent<CAnimation>().animation = m_game->getAssets().getAnimation("Explosion");
+			}
+			else
+			{
+				init(m_levelPath);
+			}
 		}
 	}
 }
@@ -643,9 +653,18 @@ void ScenePlay::sCollision() {
 			Vec2 overlap = Physics::GetOverlap(sword, enemy);
 			if (overlap != Vec2(0.0f, 0.0f))
 			{
-				damage(enemy);
+				damage(enemy, 15, sword->getComponent<CDamage>().damage);
 				break;
 			}
+		}
+	}
+
+	for (auto& enemy : m_entities.getEntities("Enemy"))
+	{
+		Vec2 overlap = Physics::GetOverlap(m_player, enemy);
+		if (overlap != Vec2(0.0f, 0.0f))
+		{
+			damage(m_player, 60, enemy->getComponent<CDamage>().damage);
 		}
 	}
 	
@@ -763,12 +782,16 @@ ScenePlay::Intersect ScenePlay::intersection(const Vec2& a, const Vec2& b)
 	std::vector<Vec2> points(4);
 	for (auto& entity : m_entities.getEntities())
 	{
-		if (entity->tag() != "Player")
+		if (entity->tag() == "Player")
+		{
+			continue;
+		}
+		else
 		{
 			if (entity->hasComponent<CBoundingBox>())
 			{
 				auto& boundComponent = entity->getComponent<CBoundingBox>();
-				if (boundComponent.rectangle.getOutlineColor() == sf::Color::Black || boundComponent.rectangle.getOutlineColor() == sf::Color::Red)
+				if (boundComponent.boxColor == sf::Color::Black || boundComponent.boxColor == sf::Color::Red)
 				{
 
 					points[0] = Vec2(boundComponent.rectangle.getPosition().x - boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y - boundComponent.halfSize.y);
@@ -776,7 +799,7 @@ ScenePlay::Intersect ScenePlay::intersection(const Vec2& a, const Vec2& b)
 					points[2] = Vec2(boundComponent.rectangle.getPosition().x + boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y + boundComponent.halfSize.y);
 					points[3] = Vec2(boundComponent.rectangle.getPosition().x - boundComponent.halfSize.x, boundComponent.rectangle.getPosition().y + boundComponent.halfSize.y);
 
-					for (int i = 0; i < 4; i++)
+					for (size_t i = 0; i < 4; i++)
 					{
 						c = points[i];
 						d = points[(i + 1) % 4];
@@ -794,6 +817,10 @@ ScenePlay::Intersect ScenePlay::intersection(const Vec2& a, const Vec2& b)
 						}
 					}
 				}
+			}
+			else
+			{
+				continue;
 			}
 		}
 	}
@@ -908,6 +935,10 @@ void ScenePlay::sMovement()
 
 		e->getComponent<CTransform>().prevPos = e->getComponent<CTransform>().pos;
 		e->getComponent<CTransform>().pos += e->getComponent<CTransform>().velocity;
+		if (e->hasComponent<CBoundingBox>())
+		{
+			e->getComponent<CBoundingBox>().rectangle.setPosition(e->getComponent<CTransform>().pos.x, e->getComponent<CTransform>().pos.y);
+		}
 	}
 }
 

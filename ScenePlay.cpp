@@ -684,21 +684,26 @@ void ScenePlay::sCollision() {
 		}
 	}
 
-	if (!m_entities.getEntities("Enemy").empty())
+	for (auto& enemy : m_entities.getEntities("Enemy"))
 	{
-		for (auto& enemy : m_entities.getEntities("Enemy"))
+		Vec2 overlap = Physics::GetOverlap(m_player, enemy);
+		if (overlap != Vec2(0.0f, 0.0f))
 		{
-			Vec2 overlap = Physics::GetOverlap(m_player, enemy);
+			damage(m_player, 60, enemy->getComponent<CDamage>().damage);
+		}
+		for (auto& tile : m_entities.getEntities("Tile"))
+		{
+			overlap = Physics::GetOverlap(tile, enemy);
 			if (overlap != Vec2(0.0f, 0.0f))
-			{
-				damage(m_player, 60, enemy->getComponent<CDamage>().damage);
-			}
-			for (auto& tile : m_entities.getEntities("Tile"))
 			{
 				if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
 				{
-					overlap = Physics::GetOverlap(tile, enemy);
-					if (overlap != Vec2(0.0f, 0.0f))
+					if (tile->getComponent<CAnimation>().animation.getName() == "Heart")
+					{
+						enemy->getComponent<CHealthBar>().remaining = enemy->getComponent<CHealthBar>().size;
+						tile->destroy();
+					}
+					else
 					{
 						solveCollision(enemy, tile, overlap);
 					}
@@ -707,23 +712,27 @@ void ScenePlay::sCollision() {
 		}
 	}
 	
-	for (auto& tile : m_entities.getEntities("Tile")) {
-		if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
+	for (auto& tile : m_entities.getEntities("Tile"))
+	{
+		Vec2 overlap = Physics::GetOverlap(m_player, tile);
+		if (overlap != Vec2(0.0f, 0.0f))
 		{
-			Vec2 overlap = Physics::GetOverlap(m_player, tile);
-			if (overlap != Vec2(0.0f, 0.0f)) {
+			if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
+			{
 				if (tile->getComponent<CAnimation>().animation.getName() == "Black")
 				{
 
+				}
+				else if (tile->getComponent<CAnimation>().animation.getName() == "Heart")
+				{
+					m_player->getComponent<CHealthBar>().remaining = m_player->getComponent<CHealthBar>().size;
+					tile->destroy();
 				}
 				else
 				{
 					solveCollision(m_player, tile, overlap);
 				}
 			}
-		}
-		else {
-			continue;
 		}
 	}
 }

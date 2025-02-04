@@ -24,8 +24,6 @@ private:
 	bool					m_drawTextures;
 	bool					m_drawCollision;
 	bool					m_drawGrid;
-	bool					m_verticalResolved;
-	bool					m_horizontalResolved;
 	bool					m_viewSet				= false;
 	const Vec2				m_gridSize				= { 64, 64 };
 	sf::Text				m_gridText;
@@ -64,6 +62,7 @@ private:
 	void spawnSword();
 	void damage(std::shared_ptr<Entity>, int , int);
 	Intersect intersection(const Vec2&, const Vec2&);
+	void solveCollision(std::shared_ptr<Entity>, std::shared_ptr<Entity>, const Vec2&);
 
 public:
 	ScenePlay(std::shared_ptr<GameEngine>, const std::string&);

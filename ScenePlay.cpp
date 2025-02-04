@@ -38,8 +38,6 @@ void ScenePlay::init(const std::string& levelPath)
 	m_drawTextures = true;
 	m_drawCollision = true;
 	m_drawGrid = false;
-	m_verticalResolved = false;
-	m_horizontalResolved = false;
 
 	m_game->m_window.setView(m_game->m_window.getDefaultView());
 
@@ -52,7 +50,7 @@ void ScenePlay::init(const std::string& levelPath)
 	m_landScapeView.setCenter(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y));
 	m_landScapeView.setSize(sf::Vector2f(768, m_game->m_heightW));
 }
-
+/*
 void ScenePlay::setView(sf::View& view, float offset)
 {
 	auto& physical = m_player->getComponent<CTransform>();
@@ -68,7 +66,7 @@ void ScenePlay::setView(sf::View& view, float offset)
 
 	if (m_viewSet)
 	{
-		if (!m_horizontalResolved)
+		if (!m_player->getComponent<CTransform>().horizontalResolved)
 		{
 			float viewLeft = view.getCenter().x - view.getSize().x / 2;
 			float viewRight = view.getCenter().x + view.getSize().x / 2;
@@ -91,7 +89,7 @@ void ScenePlay::setView(sf::View& view, float offset)
 		m_game->m_window.setView(view);
 	}
 }
-
+*/
 Vec2 ScenePlay::windowToWorld(const Vec2& windowPos) const
 {
 	auto& view = m_game->m_window.getView();
@@ -644,11 +642,33 @@ void ScenePlay::damage(std::shared_ptr<Entity> entity, int safe, int damage = 1)
 	}
 }
 
+void ScenePlay::solveCollision(std::shared_ptr<Entity>entity1, std::shared_ptr<Entity>entity2, const Vec2& overlap)
+{
+	Vec2 prevOverlap = Physics::GetPreviousOverlap(entity1, entity2);
+	auto& entity1Transform = entity1->getComponent<CTransform>();
+	auto& entity2Transform = entity2->getComponent<CTransform>();
+
+	if (prevOverlap.x > 0) {
+		if (entity1Transform.pos.y > entity2Transform.pos.y) {
+			entity1Transform.pos.y += overlap.y;
+		}
+		else {
+			entity1Transform.pos.y -= overlap.y;
+		}
+	}
+
+	if (prevOverlap.y > 0) {
+		if (entity1Transform.pos.x > entity2Transform.pos.x) {
+			entity1Transform.pos.x += overlap.x;
+		}
+		else {
+			entity1Transform.pos.x -= overlap.x;
+		}
+	}
+}
+
 void ScenePlay::sCollision() {
 	const float EPSILON = 1e-5f;
-
-	m_verticalResolved = false;
-	m_horizontalResolved = false;
 	Vec2 totalAdjustment(0.0f, 0.0f);
 
 	for (auto& sword : m_entities.getEntities("Sword"))
@@ -664,97 +684,48 @@ void ScenePlay::sCollision() {
 		}
 	}
 
-	for (auto& enemy : m_entities.getEntities("Enemy"))
+	if (!m_entities.getEntities("Enemy").empty())
 	{
-		Vec2 overlap = Physics::GetOverlap(m_player, enemy);
-		if (overlap != Vec2(0.0f, 0.0f))
+		for (auto& enemy : m_entities.getEntities("Enemy"))
 		{
-			damage(m_player, 60, enemy->getComponent<CDamage>().damage);
+			Vec2 overlap = Physics::GetOverlap(m_player, enemy);
+			if (overlap != Vec2(0.0f, 0.0f))
+			{
+				damage(m_player, 60, enemy->getComponent<CDamage>().damage);
+			}
+			for (auto& tile : m_entities.getEntities("Tile"))
+			{
+				if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
+				{
+					overlap = Physics::GetOverlap(tile, enemy);
+					if (overlap != Vec2(0.0f, 0.0f))
+					{
+						solveCollision(enemy, tile, overlap);
+					}
+				}
+			}
 		}
 	}
 	
 	for (auto& tile : m_entities.getEntities("Tile")) {
-		Vec2 overlap = Physics::GetOverlap(m_player, tile);
-		if (overlap != Vec2(0.0f, 0.0f)) {
-			if (tile->getComponent<CAnimation>().animation.getName() == "Flag")
-			{
-				for (auto& entity : m_entities.getEntities())
+		if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
+		{
+			Vec2 overlap = Physics::GetOverlap(m_player, tile);
+			if (overlap != Vec2(0.0f, 0.0f)) {
+				if (tile->getComponent<CAnimation>().animation.getName() == "Black")
 				{
-					entity->destroy();
+
 				}
-
-				size_t pos = m_levelPath.find_last_of("0123456789");
-				size_t start = pos;
-				while (start > 0 && std::isdigit(m_levelPath[start - 1])) {
-					--start;
-				}
-
-				std::string numberStr = m_levelPath.substr(start, pos - start + 1);
-
-				int number = std::stoi(numberStr);
-
-				number = (number % 3) + 1;
-
-				std::string incrementedLevel = m_levelPath.substr(0, start) + std::to_string(number) + ".txt";
-				m_game->changeScene("PLAY" + std::to_string(number), std::make_shared<ScenePlay>(m_game, incrementedLevel));
-			}
-			else
-			{
-				Vec2 prevOverlap = Physics::GetPreviousOverlap(m_player, tile);
-				auto& playerTransform = m_player->getComponent<CTransform>();
-				auto& tileTransform = tile->getComponent<CTransform>();
-				auto& tileAnimation = tile->getComponent<CAnimation>();
-
-				if (!m_verticalResolved && prevOverlap.x > 0) {
-					if (playerTransform.pos.y > tileTransform.pos.y) {
-						playerTransform.velocity.y = overlap.y;
-						if (tileAnimation.animation.getName() == "Brick") {
-							m_sound.setBuffer(m_game->getAssets().getSound("Explosion"));
-							m_sound.play();
-							tile->getComponent<CBoundingBox>().has = false;
-							tileAnimation.destroy = true;
-							tileAnimation.animation = m_game->getAssets().getAnimation("Explosion");
-						}
-						else if (tileAnimation.animation.getName() == "Question") {
-							m_sound.setBuffer(m_game->getAssets().getSound("Coin"));
-							m_sound.play();
-
-							m_score++;
-
-							tileAnimation.animation = m_game->getAssets().getAnimation("Question2");
-							auto coin = m_entities.addEntity("Coin");
-							coin->addComponent<CAnimation>(m_game->getAssets().getAnimation("CoinSpin"), true);
-							coin->addComponent<CTransform>(gridtoMidPixel((tileTransform.pos.x - 32) / 64, (tileTransform.pos.y - 32) / 64 - 1, coin));
-						}
-					}
-					else {
-						playerTransform.pos.y -= overlap.y;
-					}
-					m_verticalResolved = true;
-				}
-
-				if (!m_horizontalResolved && prevOverlap.y > 0) {
-					if (playerTransform.pos.x > tileTransform.pos.x) {
-						playerTransform.pos.x += overlap.x;
-					}
-					else {
-						playerTransform.pos.x -= overlap.x;
-					}
-					m_horizontalResolved = true;
-				}
-
-				if (m_verticalResolved && m_horizontalResolved) {
-					break;
+				else
+				{
+					solveCollision(m_player, tile, overlap);
 				}
 			}
 		}
+		else {
+			continue;
+		}
 	}
-
-
-	auto& playerTransform = m_player->getComponent<CTransform>();
-	playerTransform.pos.x += totalAdjustment.x;
-	playerTransform.pos.y += totalAdjustment.y;
-
 }
 
 

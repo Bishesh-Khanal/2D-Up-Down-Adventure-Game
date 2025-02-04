@@ -340,13 +340,11 @@ void ScenePlay::sDebug()
 				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
 			}
 		}
+
 		for (auto& entity : m_entities.getEntities())
 		{
 			if (entity->tag() != "Sword")
 			{
-				entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
-				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
-
 				if (entity->hasComponent<CHealthBar>())
 				{
 					auto& healthBarComp = entity->getComponent<CHealthBar>();
@@ -372,6 +370,9 @@ void ScenePlay::sDebug()
 					}
 
 				}
+
+				entity->getComponent<CAnimation>().animation.getSprite().setPosition(entity->getComponent<CTransform>().pos.x, entity->getComponent<CTransform>().pos.y);
+				m_game->m_window.draw(entity->getComponent<CAnimation>().animation.getSprite());
 			}
 			else
 			{

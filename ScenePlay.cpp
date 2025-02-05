@@ -111,7 +111,7 @@ void ScenePlay::spawnPlayer()
 
 	m_player->addComponent<CState>("StandSide");
 
-	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 2, m_player)));
+	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(11, 11, m_player)));
 
 	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x-10, m_player->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
 
@@ -882,7 +882,7 @@ void ScenePlay::sMovement()
 					Vec2 first(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
 					Vec2 second(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
 					theta = second.angle(first);
-					if (second.distq(e->getComponent<CTransform>().pos) <= 0.5f)
+					if (second.distq(e->getComponent<CTransform>().pos) <= 2.5f)
 					{
 						patrolComponent.current = (patrolComponent.current + 1) % size;
 						first = Vec2(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
@@ -900,21 +900,36 @@ void ScenePlay::sMovement()
 				ScenePlay::Intersect intersectResult = intersection(e->getComponent<CTransform>().pos, m_player->getComponent<CTransform>().pos);
 				if (intersectResult.result)
 				{
-					float theta = Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).angle(e->getComponent<CTransform>().pos);
-					if (Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).distq(e->getComponent<CTransform>().pos) > 0.5f)
+					if (Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).distq(e->getComponent<CTransform>().pos) >= 2.5f && !patrolComponent.patrolling)
 					{
+						float theta = Vec2(e->getComponent<CPatrol>().patrolReference[0].getPosition().x, e->getComponent<CPatrol>().patrolReference[0].getPosition().y).angle(e->getComponent<CTransform>().pos);
 						e->getComponent<CTransform>().velocity = Vec2(e->getComponent<CTransform>().speed * cos(theta), e->getComponent<CTransform>().speed * sin(theta));
+						patrolComponent.patrolling = false;
 					}
-					else {
-						e->getComponent<CTransform>().velocity = Vec2(0, 0);
+					else
+					{ 
+						//e->getComponent<CTransform>().velocity = Vec2(0, 0);
+						if (!patrolComponent.patrolling)
+						{
+							if (patrolComponent.patrolPoints.size() > 1)
+							{
+								patrolComponent.current = 0;
+							}
+							else
+							{
+								e->getComponent<CTransform>().velocity = Vec2(0, 0);
+								
+							}
+							patrolComponent.patrolling = true;
+						}
 					}
-					patrolComponent.patrolling = true;
+					//patrolComponent.patrolling = true;
 				}
 				else
 				{
+					patrolComponent.patrolling = false;
 					float theta = m_player->getComponent<CTransform>().pos.angle(e->getComponent<CTransform>().pos);
 					e->getComponent<CTransform>().velocity = Vec2(e->getComponent<CTransform>().speed * cos(theta), e->getComponent<CTransform>().speed * sin(theta));
-					patrolComponent.patrolling = false;
 				}
 			}
 		}

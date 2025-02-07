@@ -6,6 +6,8 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 void ScenePlay::init(const std::string& levelPath)
 {
@@ -35,6 +37,7 @@ void ScenePlay::init(const std::string& levelPath)
 	}
 
 	loadLevel(levelPath);
+	srand(time(NULL));
 
 	spawnPlayer();
 }
@@ -124,7 +127,7 @@ void ScenePlay::loadLevel(const std::string& level_path)
 				sf::Color colorName;
 				selectColor(color, colorName);
 				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
-
+				
 				if (entity->getComponent<CAnimation>().animation.getName() == "Black")
 				{
 					m_teleportPoints.push_back(entity->getComponent<CTransform>().pos);
@@ -657,7 +660,12 @@ void ScenePlay::solveCollision(std::shared_ptr<Entity>entity1, std::shared_ptr<E
 			}
 			else
 			{
-				entity1Transform.pos = { 0,0 };
+				size_t randomPoint = 0 + rand() % m_teleportPoints.size();
+				if (m_teleportPoints[randomPoint] == entity2Transform.pos)
+				{
+					randomPoint = (randomPoint + 1) % m_teleportPoints.size();
+				}
+				entity1Transform.pos = Vec2(m_teleportPoints[randomPoint].x, m_teleportPoints[randomPoint].y + m_gridSize.y + 32.0f);
 			}
 		}
 		else {

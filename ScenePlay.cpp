@@ -73,25 +73,11 @@ void ScenePlay::spawnPlayer()
 
 	m_player->addComponent<CState>("StandSide");
 
-	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(11, 11, m_player)));
+	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 0, 11, 11, m_player)));
 
 	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x-10, m_player->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
 
 	m_player->addComponent<CHealthBar>(5);
-}
-
-Vec2 ScenePlay::gridtoMidPixel(float gridX, float gridY, std::shared_ptr<Entity> entity)
-{
-	if (!entity->hasComponent<CAnimation>()) {
-		throw std::runtime_error("Entity missing required CAnimation component.");
-	}
-
-	auto& animationSize = entity->getComponent<CAnimation>().animation.getSize();
-
-	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
-	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
-
-	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
 }
 
 void ScenePlay::loadLevel(const std::string& level_path)
@@ -115,21 +101,21 @@ void ScenePlay::loadLevel(const std::string& level_path)
 		std::istringstream lineStream(line);
 		std::string assetType, nameAsset, patrolType, chaseType, color, xAsset, yAsset;
 		size_t healthBarSize;
-		int damage;
+		int damage, xWindow, yWindow;
 		float speed;
 
-		if (lineStream >> assetType >> nameAsset >> patrolType >> xAsset >> yAsset >> chaseType >> healthBarSize >> color >> damage >> speed)
+		if (lineStream >> assetType >> nameAsset >> patrolType >> xWindow >> yWindow >> xAsset >> yAsset >> chaseType >> healthBarSize >> color >> damage >> speed)
 		{
 			if (assetType == "Enemy")
 			{
-				spawnEnemy(nameAsset, patrolType, xAsset, yAsset, chaseType, healthBarSize, color, damage, speed);
+				spawnEnemy(nameAsset, patrolType, xWindow, yWindow, xAsset, yAsset, chaseType, healthBarSize, color, damage, speed);
 			}
 			else
 			{
 				auto entity = m_entities.addEntity(assetType);
 				entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(nameAsset), false);
 
-				entity->addComponent<CTransform>(gridtoMidPixel(std::stof(xAsset), std::stof(yAsset), entity));
+				entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, std::stof(xAsset), std::stof(yAsset), entity));
 
 				if (assetType == "Tile")
 				{
@@ -145,6 +131,20 @@ void ScenePlay::loadLevel(const std::string& level_path)
 			std::cerr << "Malformed line" << std::endl;
 		}
 	}
+}
+
+Vec2 ScenePlay::gridtoMidPixel(float windoX, float windowY, float gridX, float gridY, std::shared_ptr<Entity> entity)
+{
+	if (!entity->hasComponent<CAnimation>()) {
+		throw std::runtime_error("Entity missing required CAnimation component.");
+	}
+
+	auto& animationSize = entity->getComponent<CAnimation>().animation.getSize();
+
+	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
+	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
+
+	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
 }
 
 void ScenePlay::selectColor(const std::string& color, sf::Color& colorName)
@@ -183,7 +183,7 @@ std::vector<float> ScenePlay::parseValues(const std::string& str) {
 	return values;
 }
 
-void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color, int damage, float speed)
+void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, float xWindow, float yWindow, const std::string& xPos, const std::string& yPos, const std::string& chase, size_t health, const std::string& color, int damage, float speed)
 {
 	std::shared_ptr<Entity> entity = m_entities.addEntity("Enemy");
 	entity->addComponent<CAnimation>(m_game->getAssets().getAnimation(name), false);
@@ -193,7 +193,7 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, c
 		std::vector<Vec2> patrolPoints;
 		patrolPoints.push_back(Vec2(std::stof(xPos), std::stof(yPos)));
 		entity->addComponent<CPatrol>(patrolPoints);
-		entity->addComponent<CTransform>(gridtoMidPixel(patrolPoints[0].x, patrolPoints[0].y, entity));
+		entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, patrolPoints[0].x, patrolPoints[0].y, entity));
 	}
 	else
 	{
@@ -210,7 +210,7 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, c
 		}
 
 		entity->addComponent<CPatrol>(patrolPoints);
-		entity->addComponent<CTransform>(gridtoMidPixel(patrolPoints[0].x, patrolPoints[0].y, entity));
+		entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, patrolPoints[0].x, patrolPoints[0].y, entity));
 	}
 
 	if (chase == "Chase")
@@ -345,13 +345,13 @@ void ScenePlay::sDebug()
 	{
 		sf::VertexArray gridLines(sf::Lines);
 
-		for (int x = -m_game->m_worldWidth - (m_gridSize.x / 7.5f); x <= m_game->m_worldWidth; x += m_gridSize.x)
+		for (int x = -m_game->m_worldWidth; x <= m_game->m_worldWidth; x += m_gridSize.x)
 		{
 			gridLines.append(sf::Vertex(sf::Vector2f(x, -m_game->m_worldHeight), sf::Color::White));
 			gridLines.append(sf::Vertex(sf::Vector2f(x, m_game->m_worldHeight), sf::Color::White));
 		}
 
-		for (int y = -m_game->m_worldHeight - (m_gridSize.y / 2.0f); y <= m_game->m_worldHeight; y += m_gridSize.y)
+		for (int y = -m_game->m_worldHeight; y <= m_game->m_worldHeight; y += m_gridSize.y)
 		{
 			gridLines.append(sf::Vertex(sf::Vector2f(-m_game->m_worldWidth, y), sf::Color::White));
 			gridLines.append(sf::Vertex(sf::Vector2f(m_game->m_worldWidth, y), sf::Color::White));

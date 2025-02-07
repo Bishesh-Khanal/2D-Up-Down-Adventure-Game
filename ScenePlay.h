@@ -26,13 +26,14 @@ private:
 	bool					m_drawGrid				= false;
 	bool					m_follow				= true;
 	const Vec2				m_gridSize				= { 64, 64 };
+	Vec2					m_currentView			= { 0, 0 };
 	sf::Text				m_gridText;
 	sf::Text				m_playText;
 	int						m_swordDestroyedLast	= 0;
 	Vec2					m_mPos;
 	sf::CircleShape			m_mShape;
 	sf::View				m_view;
-
+	std::vector<Vec2>		m_teleportPoints;
 
 	void init(const std::string&);
 

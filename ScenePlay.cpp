@@ -48,6 +48,10 @@ void ScenePlay::setView()
 
 		m_view.move(sf::Vector2f(m_player->getComponent<CTransform>().velocity.x, m_player->getComponent<CTransform>().velocity.y));
 	}
+	else
+	{
+		
+	}
 
 	m_game->m_window.setView(m_view);
 }
@@ -117,11 +121,13 @@ void ScenePlay::loadLevel(const std::string& level_path)
 
 				entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, std::stof(xAsset), std::stof(yAsset), entity));
 
-				if (assetType == "Tile")
+				sf::Color colorName;
+				selectColor(color, colorName);
+				entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
+
+				if (entity->getComponent<CAnimation>().animation.getName() == "Black")
 				{
-					sf::Color colorName;
-					selectColor(color, colorName);
-					entity->addComponent<CBoundingBox>(Vec2(entity->getComponent<CAnimation>().animation.getSize().x, entity->getComponent<CAnimation>().animation.getSize().y), colorName);
+					m_teleportPoints.push_back(entity->getComponent<CTransform>().pos);
 				}
 			}
 
@@ -131,30 +137,6 @@ void ScenePlay::loadLevel(const std::string& level_path)
 			std::cerr << "Malformed line" << std::endl;
 		}
 	}
-}
-
-Vec2 ScenePlay::gridtoMidPixel(float windowX, float windowY, float gridX, float gridY, std::shared_ptr<Entity> entity)
-{
-	if (!entity->hasComponent<CAnimation>()) {
-		throw std::runtime_error("Entity missing required CAnimation component.");
-	}
-
-	auto& animationSize = entity->getComponent<CAnimation>().animation.getSize();
-
-	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
-	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
-
-	if (windowX != 0)
-	{
-		return Vec2(centerX * m_gridSize.x + (windowX * m_game->m_widthW), centerY * m_gridSize.y);
-	}
-
-	if (windowY != 0)
-	{
-		return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y + (windowY * m_game->m_heightW));
-	}
-
-	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
 }
 
 void ScenePlay::selectColor(const std::string& color, sf::Color& colorName)
@@ -201,9 +183,23 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, f
 	if (patrol == "NonPatrol")
 	{
 		std::vector<Vec2> patrolPoints;
-		patrolPoints.push_back(Vec2(std::stof(xPos), std::stof(yPos)));
-		entity->addComponent<CPatrol>(patrolPoints);
+		float x = std::stof(xPos);
+		float y = std::stof(yPos);
+
+		patrolPoints.push_back(Vec2(x, y));
 		entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, patrolPoints[0].x, patrolPoints[0].y, entity));
+
+		if (xWindow != 0)
+		{
+			x = x + ((xWindow * m_game->m_widthW) / m_gridSize.x);
+		}
+
+		if (yWindow != 0)
+		{
+			y = y + ((yWindow * m_game->m_heightW) / m_gridSize.y);
+		}
+		patrolPoints[0] = Vec2(x, y);
+		entity->addComponent<CPatrol>(patrolPoints);
 	}
 	else
 	{
@@ -218,9 +214,20 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, f
 		for (size_t i = 0; i < xValues.size(); i++) {
 			patrolPoints.push_back({ xValues[i], yValues[i] });
 		}
-
-		entity->addComponent<CPatrol>(patrolPoints);
 		entity->addComponent<CTransform>(gridtoMidPixel(xWindow, yWindow, patrolPoints[0].x, patrolPoints[0].y, entity));
+
+		for (size_t i = 0; i < xValues.size(); i++) {
+			if (xWindow != 0)
+			{
+				patrolPoints[i].x = patrolPoints[i].x + ((xWindow * m_game->m_widthW)/m_gridSize.x);
+			}
+
+			if (yWindow != 0)
+			{
+				patrolPoints[i].y = patrolPoints[i].y + ((yWindow * m_game->m_heightW)/m_gridSize.y);
+			}
+		}
+		entity->addComponent<CPatrol>(patrolPoints);
 	}
 
 	if (chase == "Chase")
@@ -237,6 +244,30 @@ void ScenePlay::spawnEnemy(const std::string& name, const std::string& patrol, f
 	entity->addComponent<CDamage>(damage);
 
 	entity->getComponent<CTransform>().speed = speed;
+}
+
+Vec2 ScenePlay::gridtoMidPixel(float windowX, float windowY, float gridX, float gridY, std::shared_ptr<Entity> entity)
+{
+	if (!entity->hasComponent<CAnimation>()) {
+		throw std::runtime_error("Entity missing required CAnimation component.");
+	}
+
+	auto& animationSize = entity->getComponent<CAnimation>().animation.getSize();
+
+	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
+	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
+
+	if (windowX != 0)
+	{
+		return Vec2(centerX * m_gridSize.x + (windowX * m_game->m_widthW), centerY * m_gridSize.y);
+	}
+
+	if (windowY != 0)
+	{
+		return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y + (windowY * m_game->m_heightW));
+	}
+
+	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
 }
 
 ScenePlay::ScenePlay(std::shared_ptr<GameEngine> game, const std::string& level_path)
@@ -620,7 +651,14 @@ void ScenePlay::solveCollision(std::shared_ptr<Entity>entity1, std::shared_ptr<E
 
 	if (prevOverlap.x > 0) {
 		if (entity1Transform.pos.y > entity2Transform.pos.y) {
-			entity1Transform.pos.y += overlap.y;
+			if (entity2->getComponent<CAnimation>().animation.getName() != "Black")
+			{
+				entity1Transform.pos.y += overlap.y;
+			}
+			else
+			{
+				entity1Transform.pos = { 0,0 };
+			}
 		}
 		else {
 			entity1Transform.pos.y -= overlap.y;
@@ -689,11 +727,7 @@ void ScenePlay::sCollision() {
 		{
 			if (tile->getComponent<CBoundingBox>().boxColor == sf::Color::Black || tile->getComponent<CBoundingBox>().boxColor == sf::Color::Blue)
 			{
-				if (tile->getComponent<CAnimation>().animation.getName() == "Black")
-				{
-
-				}
-				else if (tile->getComponent<CAnimation>().animation.getName() == "Heart")
+				if (tile->getComponent<CAnimation>().animation.getName() == "Heart")
 				{
 					m_player->getComponent<CHealthBar>().remaining = m_player->getComponent<CHealthBar>().size;
 					tile->destroy();

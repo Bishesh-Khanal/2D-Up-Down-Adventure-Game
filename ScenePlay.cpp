@@ -20,6 +20,7 @@ void ScenePlay::init(const std::string& levelPath)
 	registerAction(sf::Keyboard::C, "TOGGLE_COLLISION");
 	registerAction(sf::Keyboard::G, "TOGGLE_GRID");
 	registerAction(sf::Keyboard::B, "SHOOT");
+	registerAction(sf::Keyboard::V, "CHANGE_VIEW");
 
 	m_gridText.setCharacterSize(16);
 	m_gridText.setFont(m_game->getAssets().getFont("Algerian"));
@@ -35,61 +36,22 @@ void ScenePlay::init(const std::string& levelPath)
 
 	loadLevel(levelPath);
 
-	m_drawTextures = true;
-	m_drawCollision = true;
-	m_drawGrid = false;
-
-	m_game->m_window.setView(m_game->m_window.getDefaultView());
-
-	m_viewSet = false;
-
 	spawnPlayer();
-
-	m_playerView.setCenter(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y));
-	m_playerView.setSize(sf::Vector2f(768, m_game->m_heightW));
-	m_landScapeView.setCenter(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y));
-	m_landScapeView.setSize(sf::Vector2f(768, m_game->m_heightW));
 }
-/*
-void ScenePlay::setView(sf::View& view, float offset)
+
+void ScenePlay::setView()
 {
-	auto& physical = m_player->getComponent<CTransform>();
-	if (!m_viewSet)
+	if (m_follow)
 	{
-		if (physical.pos.x >= (m_game->m_widthW) / 2)
-		{
-			m_viewSet = true;
-			m_playerView.reset(sf::FloatRect(0, 0, m_game->m_widthW, m_game->m_heightW));
-			m_landScapeView.reset(sf::FloatRect(0, 0, m_game->m_widthW, m_game->m_heightW));
-		}
+		m_view.setCenter(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y));
+		m_view.setSize(sf::Vector2f(m_game->m_widthW, m_game->m_heightW));
+
+		m_view.move(sf::Vector2f(m_player->getComponent<CTransform>().velocity.x, m_player->getComponent<CTransform>().velocity.y));
 	}
 
-	if (m_viewSet)
-	{
-		if (!m_player->getComponent<CTransform>().horizontalResolved)
-		{
-			float viewLeft = view.getCenter().x - view.getSize().x / 2;
-			float viewRight = view.getCenter().x + view.getSize().x / 2;
-			if (!m_paused)
-			{
-				if (physical.velocity.x < 0 && viewLeft >= 0)
-				{
-					view.move(sf::Vector2f(offset, 0));
-				}
-				else if (physical.velocity.x > 0 && viewRight <= m_game->m_worldWidth)
-				{
-					view.move(sf::Vector2f(offset, 0));
-				}
-				else if (viewLeft < 0)
-				{
-					m_viewSet = false;
-				}
-			}
-		}
-		m_game->m_window.setView(view);
-	}
+	m_game->m_window.setView(m_view);
 }
-*/
+
 Vec2 ScenePlay::windowToWorld(const Vec2& windowPos) const
 {
 	auto& view = m_game->m_window.getView();
@@ -322,15 +284,9 @@ void ScenePlay::sAnimation()
 
 void ScenePlay::sDebug()
 {
-	m_game->m_window.setView(m_game->m_window.getDefaultView());
-	m_playText.setString("SCORE: " + std::to_string(m_score));
-	m_playText.setCharacterSize(30);
-	m_playText.setPosition(1350.0f, 0.0f);
-	m_game->m_window.draw(m_playText);
-
+	setView();
 	if (m_drawTextures)
 	{
-		//setView(m_playerView, m_player->getComponent<CTransform>().velocity.x);
 		std::string state = m_player->getComponent<CState>().state;
 		for (auto& entity : m_entities.getEntities("Sword"))
 		{
@@ -389,13 +345,13 @@ void ScenePlay::sDebug()
 	{
 		sf::VertexArray gridLines(sf::Lines);
 
-		for (int x = -m_game->m_worldWidth; x <= m_game->m_worldWidth; x += m_gridSize.x)
+		for (int x = -m_game->m_worldWidth - (m_gridSize.x / 7.5f); x <= m_game->m_worldWidth; x += m_gridSize.x)
 		{
 			gridLines.append(sf::Vertex(sf::Vector2f(x, -m_game->m_worldHeight), sf::Color::White));
 			gridLines.append(sf::Vertex(sf::Vector2f(x, m_game->m_worldHeight), sf::Color::White));
 		}
 
-		for (int y = -m_game->m_worldHeight; y <= m_game->m_worldHeight; y += m_gridSize.y)
+		for (int y = -m_game->m_worldHeight - (m_gridSize.y / 2.0f); y <= m_game->m_worldHeight; y += m_gridSize.y)
 		{
 			gridLines.append(sf::Vertex(sf::Vector2f(-m_game->m_worldWidth, y), sf::Color::White));
 			gridLines.append(sf::Vertex(sf::Vector2f(m_game->m_worldWidth, y), sf::Color::White));
@@ -545,6 +501,10 @@ void ScenePlay::sDoAction(const Action& action)
 		if (action.name() == "PAUSE")
 		{
 			m_paused = !m_paused;
+		}
+		if (action.name() == "CHANGE_VIEW")
+		{
+			m_follow = !m_follow;
 		}
 
 		if (action.name() == "MOUSE_MOVE")
@@ -840,7 +800,8 @@ void ScenePlay::sMovement()
 		playerVelocity.y = 4.0;
 		m_player->getComponent<CState>().state = "RunDown";
 	}
-
+	
+	/*
 	if (m_player->getComponent<CTransform>().pos.x - m_player->getComponent<CBoundingBox>().halfSize.x <= 0)
 	{
 		playerVelocity.x = 0.1f;
@@ -850,7 +811,7 @@ void ScenePlay::sMovement()
 	{
 		playerVelocity.x = -0.1f;
 	}
-	
+	*/
 
 	m_player->getComponent<CTransform>().velocity = playerVelocity;
 
@@ -959,20 +920,9 @@ void ScenePlay::sRender()
 	{
 		m_playText.setString("PAUSED");
 		m_playText.setCharacterSize(100);
-		if (m_viewSet)
-		{
-			m_playText.setPosition(m_playerView.getCenter().x - 192, m_playerView.getCenter().y - 64);
-		}
-		else
-		{
-			m_playText.setPosition(m_game->m_window.getDefaultView().getCenter().x - 192, m_game->m_window.getDefaultView().getCenter().y - 64);
-		}
+		m_playText.setPosition(m_view.getCenter().x - 192, m_view.getCenter().y - 64);
 		m_game->m_window.draw(m_playText);
 	}
 
 	m_game->m_window.display();
 }
-
-/*
-
-*/

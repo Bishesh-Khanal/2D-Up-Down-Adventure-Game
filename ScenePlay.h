@@ -21,19 +21,17 @@ private:
 	std::string				m_levelPath;
 	std::shared_ptr<Entity>	m_player;
 	PlayerConfig			m_playerConfig;
-	bool					m_drawTextures;
-	bool					m_drawCollision;
-	bool					m_drawGrid;
-	bool					m_viewSet				= false;
+	bool					m_drawTextures			= true;
+	bool					m_drawCollision			= false;
+	bool					m_drawGrid				= false;
+	bool					m_follow				= true;
 	const Vec2				m_gridSize				= { 64, 64 };
 	sf::Text				m_gridText;
 	sf::Text				m_playText;
-	int						m_score					= 0;
 	int						m_swordDestroyedLast	= 0;
 	Vec2					m_mPos;
 	sf::CircleShape			m_mShape;
-	sf::View				m_playerView;
-	sf::View				m_landScapeView;
+	sf::View				m_view;
 
 
 	void init(const std::string&);
@@ -52,7 +50,7 @@ private:
 	void sLifeSpan();
 
 	void loadLevel(const std::string&);
-	void setView(sf::View&, float);
+	void setView();
 	void spawnPlayer();
 	void spawnEnemy(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, size_t, const std::string&, int, float);
 	std::vector<float> parseValues(const std::string&);

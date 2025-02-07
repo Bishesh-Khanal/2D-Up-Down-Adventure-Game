@@ -389,36 +389,35 @@ void ScenePlay::sDebug()
 	{
 		sf::VertexArray gridLines(sf::Lines);
 
-		for (int x = 0; x <= m_game->m_worldWidth; x += m_gridSize.x)
+		for (int x = -m_game->m_worldWidth; x <= m_game->m_worldWidth; x += m_gridSize.x)
 		{
-			gridLines.append(sf::Vertex(sf::Vector2f(x, 0), sf::Color::White));
-			gridLines.append(sf::Vertex(sf::Vector2f(x, m_game->m_heightW), sf::Color::White));
+			gridLines.append(sf::Vertex(sf::Vector2f(x, -m_game->m_worldHeight), sf::Color::White));
+			gridLines.append(sf::Vertex(sf::Vector2f(x, m_game->m_worldHeight), sf::Color::White));
 		}
 
-		for (int y = 0; y <= m_game->m_heightW; y += m_gridSize.y)
+		for (int y = -m_game->m_worldHeight; y <= m_game->m_worldHeight; y += m_gridSize.y)
 		{
-			gridLines.append(sf::Vertex(sf::Vector2f(0, y), sf::Color::White));
+			gridLines.append(sf::Vertex(sf::Vector2f(-m_game->m_worldWidth, y), sf::Color::White));
 			gridLines.append(sf::Vertex(sf::Vector2f(m_game->m_worldWidth, y), sf::Color::White));
 		}
 
 		m_game->m_window.draw(gridLines);
 		m_gridText.setFillColor(sf::Color::White);
 
-
-		for (int y = 0; y < m_game->m_heightW / m_gridSize.y; ++y)
+		for (int y = -m_game->m_worldHeight / m_gridSize.y; y <= m_game->m_worldHeight / m_gridSize.y; ++y)
 		{
-			for (int x = 0; x < m_game->m_worldWidth / m_gridSize.x; ++x)
+			for (int x = -m_game->m_worldWidth / m_gridSize.x; x <= m_game->m_worldWidth / m_gridSize.x; ++x)
 			{
 				std::ostringstream label;
 				label << "(" << x << "," << y << ")";
 				m_gridText.setString(label.str());
 
 				m_gridText.setPosition(x * m_gridSize.x + 5, y * m_gridSize.y + 5);
-
 				m_game->m_window.draw(m_gridText);
 			}
 		}
 	}
+
 
 	if (m_drawCollision)
 	{
@@ -882,7 +881,7 @@ void ScenePlay::sMovement()
 					Vec2 first(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);
 					Vec2 second(patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().x, patrolComponent.patrolReference[(patrolComponent.current + 1) % size].getPosition().y);
 					theta = second.angle(first);
-					if (second.distq(e->getComponent<CTransform>().pos) <= 2.5f)
+					if (second.distq(e->getComponent<CTransform>().pos) <= 5.0f)
 					{
 						patrolComponent.current = (patrolComponent.current + 1) % size;
 						first = Vec2(patrolComponent.patrolReference[patrolComponent.current].getPosition().x, patrolComponent.patrolReference[patrolComponent.current].getPosition().y);

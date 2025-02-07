@@ -15,11 +15,12 @@ private:
 	sf::RenderWindow		m_window;
 	Assets					m_assets;
 	std::string				m_currentScene;
-	size_t					m_simulationSpeed = 1;
-	bool					m_running = true;
-	float					m_widthW = 1500.0f;
-	float					m_heightW = 1200.0f;
-	float					m_worldWidth = 3000.0f;
+	size_t					m_simulationSpeed	= 1;
+	bool					m_running			= true;
+	float					m_widthW			= 1500.0f;
+	float					m_heightW			= 1200.0f;
+	float					m_worldWidth		= 2 * m_widthW;
+	float					m_worldHeight		= 2 * m_heightW;
 
 	void init(const std::string&);
 	const std::shared_ptr<Scene>& currentScene();

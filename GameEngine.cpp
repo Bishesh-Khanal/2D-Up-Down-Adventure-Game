@@ -62,7 +62,7 @@ void GameEngine::init(const std::string& path)
     getAssets().debugFonts();
     getAssets().debugAnimations();
 
-    m_window.create(sf::VideoMode(m_widthW, m_heightW), "Game", sf::Style::Close);
+    m_window.create(sf::VideoMode(m_widthW, m_heightW), "2D UP DOWN GAME", sf::Style::Close);
     m_window.setFramerateLimit(60);
 
     std::cout << "Game engine initialized successfully." << std::endl;

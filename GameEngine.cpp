@@ -148,7 +148,7 @@ void GameEngine::sUserInput()
         {
             currentScene()->doAction(Action("MOUSE_MOVE", "START", Vec2(event.mouseMove.x, event.mouseMove.y)));
         }
-
+       
         if (event.type == sf::Event::Resized)
         {
             m_widthW = m_window.getSize().x;
@@ -156,9 +156,14 @@ void GameEngine::sUserInput()
             m_window.close();
             m_window.create(sf::VideoMode(m_widthW, m_heightW), "Game");
         }
+
+        if (event.type == sf::Event::LostFocus)
+        {
+            currentScene()->m_paused = true;
+        }
+
     }
 }
-
 void GameEngine::update()
 {
     currentScene()->update();

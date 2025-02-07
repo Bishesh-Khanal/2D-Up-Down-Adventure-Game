@@ -78,7 +78,6 @@ void SceneMenu::sRender()
 	m_game->m_window.clear(sf::Color(220, 222, 217));
 	m_game->m_window.setView(m_game->m_window.getDefaultView());
 
-
 	m_menuFont = m_game->getAssets().getFont("Algerian");
 	m_menuText.setFont(m_menuFont);
 	m_menuText.setString("MENU SCREEN");

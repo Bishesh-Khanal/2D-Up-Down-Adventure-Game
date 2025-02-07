@@ -749,8 +749,6 @@ void ScenePlay::sCollision() {
 	}
 }
 
-
-
 void ScenePlay::update() {
 	m_entities.update();
 	if (!m_paused) {

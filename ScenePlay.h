@@ -36,7 +36,6 @@ private:
 	std::vector<Vec2>		m_teleportPoints;
 
 	void init(const std::string&);
-
 	void onEnd()							override;
 	void update()							override;
 	void sRender()							override;

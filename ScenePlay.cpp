@@ -73,7 +73,7 @@ void ScenePlay::spawnPlayer()
 
 	m_player->addComponent<CState>("StandSide");
 
-	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 0, 11, 11, m_player)));
+	m_player->addComponent<CTransform>(Vec2(gridtoMidPixel(0, 0, 11, 8, m_player)));
 
 	m_player->addComponent<CBoundingBox>(Vec2(m_player->getComponent<CAnimation>().animation.getSize().x-10, m_player->getComponent<CAnimation>().animation.getSize().y), sf::Color::Black);
 
@@ -133,7 +133,7 @@ void ScenePlay::loadLevel(const std::string& level_path)
 	}
 }
 
-Vec2 ScenePlay::gridtoMidPixel(float windoX, float windowY, float gridX, float gridY, std::shared_ptr<Entity> entity)
+Vec2 ScenePlay::gridtoMidPixel(float windowX, float windowY, float gridX, float gridY, std::shared_ptr<Entity> entity)
 {
 	if (!entity->hasComponent<CAnimation>()) {
 		throw std::runtime_error("Entity missing required CAnimation component.");
@@ -143,6 +143,16 @@ Vec2 ScenePlay::gridtoMidPixel(float windoX, float windowY, float gridX, float g
 
 	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
 	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
+
+	if (windowX != 0)
+	{
+		return Vec2(centerX * m_gridSize.x + (windowX * m_game->m_widthW), centerY * m_gridSize.y);
+	}
+
+	if (windowY != 0)
+	{
+		return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y + (windowY * m_game->m_heightW));
+	}
 
 	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
 }
@@ -365,7 +375,7 @@ void ScenePlay::sDebug()
 			for (int x = -m_game->m_worldWidth / m_gridSize.x; x <= m_game->m_worldWidth / m_gridSize.x; ++x)
 			{
 				std::ostringstream label;
-				label << "(" << x << "," << y << ")";
+				label << x << "," << y;
 				m_gridText.setString(label.str());
 
 				m_gridText.setPosition(x * m_gridSize.x + 5, y * m_gridSize.y + 5);
@@ -920,7 +930,8 @@ void ScenePlay::sRender()
 	{
 		m_playText.setString("PAUSED");
 		m_playText.setCharacterSize(100);
-		m_playText.setPosition(m_view.getCenter().x - 192, m_view.getCenter().y - 64);
+		m_playText.setOrigin(200,50);
+		m_playText.setPosition(m_view.getCenter().x, m_view.getCenter().y);
 		m_game->m_window.draw(m_playText);
 	}
 

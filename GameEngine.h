@@ -17,8 +17,8 @@ private:
 	std::string				m_currentScene;
 	size_t					m_simulationSpeed	= 1;
 	bool					m_running			= true;
-	float					m_widthW			= 1408.0f;
-	float					m_heightW			= 1024.0f;
+	float					m_widthW			= 1472.0f;
+	float					m_heightW			= 1088.0f;
 	float					m_worldWidth		= 2 * m_widthW;
 	float					m_worldHeight		= 2 * m_heightW;
 

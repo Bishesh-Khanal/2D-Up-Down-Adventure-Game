@@ -24,7 +24,7 @@ private:
 	bool					m_drawTextures			= true;
 	bool					m_drawCollision			= false;
 	bool					m_drawGrid				= false;
-	bool					m_follow				= true;
+	bool					m_follow				= false;
 	const Vec2				m_gridSize				= { 64, 64 };
 	Vec2					m_currentView			= { 0, 0 };
 	sf::Text				m_gridText;

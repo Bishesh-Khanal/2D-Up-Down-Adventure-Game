@@ -53,7 +53,28 @@ void ScenePlay::setView()
 	}
 	else
 	{
-		
+		int x = static_cast<int>(m_player->getComponent<CTransform>().pos.x);
+		int y = static_cast<int>(m_player->getComponent<CTransform>().pos.y);
+
+		while (x >= static_cast<int>(-m_game->m_worldWidth))
+		{
+			if (x % static_cast<int>(m_game->m_widthW) == 0)
+			{
+				break;
+			}
+			x--;
+		}
+
+		while (y >= static_cast<int>(-m_game->m_worldHeight))
+		{
+			if (y % static_cast<int>(m_game->m_heightW) == 0)
+			{
+				break;
+			}
+			y--;
+		}
+
+		m_view.reset(sf::FloatRect(x, y, m_game->m_widthW, m_game->m_heightW));
 	}
 
 	m_game->m_window.setView(m_view);

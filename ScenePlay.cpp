@@ -281,17 +281,23 @@ Vec2 ScenePlay::gridtoMidPixel(float windowX, float windowY, float gridX, float 
 	float centerX = gridX + (animationSize.x / (2.f * m_gridSize.x));
 	float centerY = (gridY + 1) - (animationSize.y / (2.f * m_gridSize.y));
 
+	float offsetX = 0;
+	float offsetY = 0;
+
 	if (windowX != 0)
 	{
-		return Vec2(centerX * m_gridSize.x + (windowX * m_game->m_widthW), centerY * m_gridSize.y);
+		offsetX = windowX * m_game->m_widthW;
+		//return Vec2(centerX * m_gridSize.x + (windowX * m_game->m_widthW), centerY * m_gridSize.y);
 	}
 
 	if (windowY != 0)
 	{
-		return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y + (windowY * m_game->m_heightW));
+		offsetY = windowY * m_game->m_heightW;
+		//return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y + (windowY * m_game->m_heightW));
 	}
 
-	return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
+	//return Vec2(centerX * m_gridSize.x, centerY * m_gridSize.y);
+	return Vec2((centerX * m_gridSize.x) + offsetX, (centerY * m_gridSize.y) + offsetY);
 }
 
 ScenePlay::ScenePlay(std::shared_ptr<GameEngine> game, const std::string& level_path)

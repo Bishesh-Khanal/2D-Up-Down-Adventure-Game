@@ -1,4 +1,4 @@
-# 2D Up Down Adventure Game
+# Up Down Adventure Game
 
 Step into a dynamic 2D adventure where tactical movement and strategic awareness are key! Navigate a world where different entities have unique bounding boxes that influence visibility and mobility:
 

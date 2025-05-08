@@ -31,14 +31,33 @@ const ActionMap& SceneMenu::getActionMap() const
 	return m_actionMap;
 }
 
+void SceneMenu::setSound()
+{
+	switch (m_menuIndex)
+	{
+	case 0:
+		m_sound.setBuffer(m_game->getAssets().getSound("Level_1"));
+		break;
+	case 1:
+		m_sound.setBuffer(m_game->getAssets().getSound("Level_2"));
+		break;
+	case 2:
+		m_sound.setBuffer(m_game->getAssets().getSound("Level_3"));
+		break;
+	default:
+		m_sound.setBuffer(m_game->getAssets().getSound("Level_1"));
+	break;
+	}
+}
+
 void SceneMenu::sDoAction(const Action& action)
 {
 	if (action.type() == "START")
 	{
 		if (action.name() == "UP")
 		{
-			m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
-			m_sound.play();
+			//m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
+			//m_sound.play();
 			if (m_menuIndex > 0)
 			{
 				m_menuIndex--;
@@ -47,13 +66,15 @@ void SceneMenu::sDoAction(const Action& action)
 			{
 				m_menuIndex = m_menuStrings.size() - 1;
 			}
+			setSound();
+			m_sound.play();
 			std::cout << "Hovering " << action.name() << " to level " << m_menuIndex + 1 << std::endl;
 		}
 		else if (action.name() == "DOWN")
 		{
-			m_sound.setBuffer(m_game->getAssets().getSound("Bullet"));
-			m_sound.play();
 			m_menuIndex = (m_menuIndex + 1) % m_menuStrings.size();
+			setSound();
+			m_sound.play();
 			std::cout << "Hovering " << action.name() << " to level " << m_menuIndex + 1 << std::endl;
 		}
 		else if (action.name() == "PLAY")

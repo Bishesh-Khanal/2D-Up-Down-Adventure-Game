@@ -49,7 +49,7 @@ void ScenePlay::setView()
 		m_view.setCenter(sf::Vector2f(m_player->getComponent<CTransform>().pos.x, m_player->getComponent<CTransform>().pos.y));
 		m_view.setSize(sf::Vector2f(m_game->m_widthW, m_game->m_heightW));
 
-		m_view.move(sf::Vector2f(m_player->getComponent<CTransform>().velocity.x, m_player->getComponent<CTransform>().velocity.y));
+		//pm_view.move(sf::Vector2f(m_player->getComponent<CTransform>().velocity.x, m_player->getComponent<CTransform>().velocity.y));
 	}
 	else
 	{

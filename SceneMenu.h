@@ -20,6 +20,8 @@ private:
 	void sRender()							override;
 	void sDoAction(const Action&)			override;
 	const ActionMap& getActionMap() const	override;
+
+	void setSound();
 public:
 	SceneMenu(std::shared_ptr<GameEngine>);
 };
